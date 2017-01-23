@@ -170,20 +170,19 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
     plt.ylabel('Feature Importance Score')
 
 # %% import data
-df = pd.read_table("./mosquitoes_spectra.dat", index_col="Age")
+df_11 = pd.read_table("./mosquitoes_spectra.dat", index_col="Age")
 
-df = df.ix[:,1:-1]
+df_11 = df_11.ix[:,1:-1]
 
 # %% transform data
-df[df.columns] = StandardScaler().fit_transform(df[df.columns].as_matrix())
-df.head()
+df_11[df_11.columns] = StandardScaler().fit_transform(df_11[df_11.columns].as_matrix())
+df_11.head()
 
 ```
 # %% Spot check classification models
-```python
 
-X = df
-y = df.index
+X = df_11
+y = df_11.index
 
 # cross-val settings
 seed = 4
@@ -214,25 +213,19 @@ for name, model in models:
     msg = "Cross val score for {0}: {1:.2%} ± {2:.2%}".format(name, cv_results.mean(), cv_results.std())
     print(msg)
 
-
-```
 # %% plot
-```python
 sns.boxplot(x=names, y=results)
 sns.despine(offset=10, trim=True)
 plt.title('Algorithm comparison (mossie age)')
 plt.xticks(rotation=30)
 plt.ylabel('Accuracy (median, quartiles, range)')
 #plt.show()
-plt.savefig("./plots/spot_check_age.pdf")
+plt.savefig(HOME+"/Desktop/spot_check_age.jpeg")
 
-```
 # %% Spot check regression models
 
-
-```python
-X = df
-y = df.index
+X = df_11
+y = df_11.index
 
 # cross-val settings
 seed = 4
@@ -263,16 +256,11 @@ for name, model in models:
     msg = "Cross val score for {0}: {1:.2%} ± {2:.2%}".format(name, cv_results.mean(), cv_results.std())
     print(msg)
 
-```
-
 # %% plot
-
-```python
 sns.boxplot(x=names, y=results)
 sns.despine(offset=10, trim=True)
 plt.title('Algorithm comparison (mossie age)')
 plt.xticks(rotation=30)
 plt.ylabel('Accuracy (median, quartiles, range)')
 #plt.show()
-plt.savefig("./plots/spot_check_age_cont.jpeg")
-```
+plt.savefig(HOME+"/Desktop/spot_check_age.jpeg")
