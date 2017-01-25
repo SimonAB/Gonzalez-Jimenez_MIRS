@@ -451,7 +451,7 @@ np.set_printoptions(precision=2)
 plt.figure()
 plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
 plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len(
-    class_names) - 1.5, (len(class_names) + 1)], color="darkblue", style="italic", size="small")
+    class_names) - 1, (len(class_names) + 0.5)], color="darkblue", style="italic", size="small")
 
 plt.savefig("./plots/xgb_CM_age_9_rus.png", bbox_inches="tight")
 
