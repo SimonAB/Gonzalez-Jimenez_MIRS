@@ -26,7 +26,7 @@ With output category consisting of ages [1, 3, 5, 7, 9, 11, 13, 15,
 ![Spotchecking age](plots/spot_check_age.png)
 
 While logistic regression ("LR") performs slightly better here, being slightly
-more opaque than the second best (extreme grandiant bossting, XGB), I took the
+more opaque than the second best (extreme gradient boosting, XGB), I took the
 latter further through the optimisation process.
 
 #### After tuning XGBoost parameters
