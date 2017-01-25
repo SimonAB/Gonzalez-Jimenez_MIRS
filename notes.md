@@ -84,7 +84,7 @@ Classification report:
 
 Performance is **NOT** evenly spread out over all age classes. This can be visualised as follows:
 
-![Confusion matrix across all ages](plots/xgb_CM_age_9.png)
+![Confusion matrix unbalanced](plots/xgb_CM_age_9.png)
 
 This is due to the imbalance between groups... Here a number of options are available, but the most conservative is likely to be to randomly under sample the majority group ("old").
 
