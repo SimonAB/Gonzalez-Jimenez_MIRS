@@ -60,8 +60,6 @@ import xgboost as xgb
 from xgboost import XGBClassifier
 from xgboost import XGBRegressor
 
-import hdbscan
-
 import matplotlib.pyplot as plt
 %matplotlib inline
 
@@ -231,7 +229,7 @@ sns.boxplot(x=names, y=results)
 sns.despine(offset=10, trim=True)
 plt.xticks(rotation=30)
 plt.ylabel("Accuracy (median, quartiles, range)")
-plt.savefig("./plots/spot_check_age.pdf", bbox_inches="tight")
+plt.savefig("./plots/spot_check_age.png", bbox_inches="tight")
 
 ```
 # Optimising Gradient boosting with XGBoost
@@ -409,6 +407,19 @@ plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
 plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len(
     class_names) - 1.5, (len(class_names) + 1)], color="darkblue", style="italic", size="small")
 
-plt.savefig("./plots/xgb_CM_age.pdf", bbox_inches="tight")
+plt.savefig("./plots/xgb_CM_age.png", bbox_inches="tight")
 
+```
+
+# Feature Importances
+
+```python
+fig = xgb.plot_importance(model,
+                    # importance_type="gain",
+                    height=0.4,
+                    title="Importance of predictor of age",
+                    # xlabel="Average gain when feature is used",
+                    ylabel="")
+
+plt.savefig("./plots/xgb_feat_imp.png", bbox_inches="tight")
 ```
