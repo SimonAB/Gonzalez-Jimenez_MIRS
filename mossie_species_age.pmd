@@ -347,31 +347,18 @@ cv_report(gsCV_result.cv_results_)
 #     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
 
 ```
-Time elapsed: 23.61 minutes (1416.6 sec)
+Time elapsed: 37.94 minutes (2276.6 sec)
 Model with rank: 1
-Mean validation score: 62.945% ± 1.530%
-Parameters: {'n_estimators': 500, 'max_depth': 8, 'colsample_bytree': 0.5, 'learning_rate': 0.001}
+Mean validation score: 50.788% ± 2.511%
+Parameters: {'learning_rate': 0.3, 'max_depth': 6, 'n_estimators': 100, 'colsample_bytree': 1}
 
 Model with rank: 2
-Mean validation score: 62.740% ± 1.368%
-Parameters: {'n_estimators': 500, 'max_depth': 8, 'colsample_bytree': 0.6, 'learning_rate': 0.001}
+Mean validation score: 50.606% ± 2.781%
+Parameters: {'learning_rate': 0.3, 'max_depth': 6, 'n_estimators': 300, 'colsample_bytree': 1}
 
 Model with rank: 3
-Mean validation score: 62.705% ± 1.481%
-Parameters: {'n_estimators': 800, 'max_depth': 4, 'colsample_bytree': 0.5, 'learning_rate': 0.001}
-
-With randomundersampling:Time elapsed: 7.47 minutes (448.2 sec)
-Model with rank: 1
-Mean validation score: 56.506% ± 5.124%
-Parameters: {'learning_rate': 0.1, 'colsample_bytree': 0.2, 'n_estimators': 100, 'max_depth': 4}
-
-Model with rank: 1
-Mean validation score: 56.506% ± 2.823%
-Parameters: {'learning_rate': 0.3, 'colsample_bytree': 0.6, 'n_estimators': 500, 'max_depth': 8}
-
-Model with rank: 3
-Mean validation score: 56.386% ± 3.566%
-Parameters: {'learning_rate': 0.2, 'colsample_bytree': 0.8, 'n_estimators': 800, 'max_depth': 6}
+Mean validation score: 50.545% ± 2.588%
+Parameters: {'learning_rate': 0.2, 'max_depth': 8, 'n_estimators': 300, 'colsample_bytree': 1}
 
 # Finalising model
 ```python
@@ -402,10 +389,10 @@ sss = StratifiedShuffleSplit(
 sss.split(X_train, y_train)
 
 # preparing model
-classifier = XGBClassifier(n_estimators=500,
-                           max_depth=8,
-                           learning_rate=0.001,
-                           colsample_bytree=0.5,
+classifier = XGBClassifier(n_estimators=100,
+                           max_depth=6,
+                           learning_rate=0.3,
+                           colsample_bytree=1,
                            nthread=1)
 
 # Pipeline
@@ -422,52 +409,37 @@ print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}
     model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
 
 ```
-Time elapsed: 1.67 seconds
-Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.5,
-       gamma=0, learning_rate=0.001, max_delta_step=0, max_depth=8,
-       min_child_weight=1, missing=None, n_estimators=500, nthread=1,
-       objective='multi:softprob', reg_alpha=0, reg_lambda=1,
-       scale_pos_weight=1, seed=0, silent=True, subsample=1)
-
-Accuracy on test set:62.96%
-
-Classification report:
-             precision    recall  f1-score   support
-
-          1       0.27      0.38      0.32         8
-          3       0.56      0.29      0.38        31
-          5       0.67      0.14      0.23        29
-          7       0.56      0.14      0.22        37
-        old       0.66      0.96      0.78       138
-
-avg / total       0.62      0.63      0.56       243
-
-With random underng:
 Time elapsed: 0.51 seconds
-Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.5,
-       gamma=0, learning_rate=0.001, max_delta_step=0, max_depth=8,
-       min_child_weight=1, missing=None, n_estimators=500, nthread=1,
+Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=1,
+       gamma=0, learning_rate=0.3, max_delta_step=0, max_depth=6,
+       min_child_weight=1, missing=None, n_estimators=100, nthread=1,
        objective='multi:softprob', reg_alpha=0, reg_lambda=1,
        scale_pos_weight=1, seed=0, silent=True, subsample=1)
 
-Accuracy on test set:59.42%
+Accuracy on test set:47.83%
 
 Classification report:
              precision    recall  f1-score   support
 
-          1       0.68      0.87      0.76        15
-          3       0.77      0.62      0.69        16
-          5       0.64      0.47      0.54        15
-          7       0.38      0.67      0.48         9
-        old       0.50      0.36      0.42        14
+       AG_1       0.58      0.78      0.67         9
+       AG_3       0.36      0.62      0.46        13
+       AG_5       0.50      0.81      0.62        16
+       AG_7       0.45      0.38      0.42        13
+     AG_old       0.45      0.28      0.34        18
+       AR_1       0.88      0.41      0.56        17
+       AR_3       0.40      0.67      0.50         9
+       AR_5       0.44      0.31      0.36        13
+       AR_7       0.47      0.41      0.44        17
+     AR_old       0.44      0.31      0.36        13
 
-avg / total       0.62      0.59      0.59        69
+avg / total       0.51      0.48      0.47       138
 
 # Confusion matrix
-```python
 
+```python
 # class_names = y_test.sort_values().unique()
-class_names = ["1", "3", "5", "7", "old"]
+class_names = ["AG_1", "AG_3", "AG_5", "AG_7", "AG_old", "AR_1", "AR_3",
+"AR_5", "AR_7", "AR_old"]
 cm = confusion_matrix(y_test, y_pred)
 np.set_printoptions(precision=2)
 
@@ -475,10 +447,9 @@ np.set_printoptions(precision=2)
 # print(cm)
 plt.figure()
 plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
-plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len(
-    class_names) - 1, (len(class_names) + 0.5)], color="darkblue", style="italic", size="small")
+plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len( class_names) - 1.5, (len(class_names) + 1.7)], color="darkblue", style="italic", size="small")
 
-plt.savefig("./plots/xgb_CM_age_9_rus.png", bbox_inches="tight")
+plt.savefig("./plots/xgb_CM_species_age_rus.png", bbox_inches="tight")
 
 ```
 
@@ -488,9 +459,15 @@ plt.savefig("./plots/xgb_CM_age_9_rus.png", bbox_inches="tight")
 fig = xgb.plot_importance(model,
                     # importance_type="gain",
                     height=0.4,
-                    title="Importance of predictor of age",
+                    title="Importance of predictor of age and species",
                     # xlabel="Average gain when feature is used",
                     ylabel="")
 
-plt.savefig("./plots/xgb_feat_imp_9_rus.png", bbox_inches="tight")
+plt.savefig("./plots/xgb_feat_imp_species_age_rus.png", bbox_inches="tight")
+```
+
+List of top features:
+
+```python
+print(df_species_age.columns[[5, 0, 6]])
 ```
