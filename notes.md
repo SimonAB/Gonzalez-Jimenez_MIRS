@@ -1,4 +1,7 @@
-# Predicting mosquito age from near-infrared spectra ## Statistical learning
+# Predicting mosquito age from near-infrared spectra
+
+## Statistical learning
+
 Many algorithms have been developed over the years. Because it is very hard to
 predict which one will do justice to the specific data we have, it is useful to
 try out representative members of the big 'families' of algorithms, e.g. those
