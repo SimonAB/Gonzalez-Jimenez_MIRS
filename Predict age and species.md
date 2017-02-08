@@ -63,3 +63,6 @@ Three wavelengths stood out as being particularly important to the prediction:
 Ranked by decreasing importance:
 
 ![Feature importances](plots/xgb_feat_imp_species_age_rus.png)
+
+### Predicting species only
+This uses the binary label for species (AG or )
