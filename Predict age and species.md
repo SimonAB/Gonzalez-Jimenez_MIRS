@@ -65,4 +65,57 @@ Ranked by decreasing importance:
 ![Feature importances](plots/xgb_feat_imp_species_age_rus.png)
 
 ### Predicting species only
-This uses the binary label for species (AG or )
+This uses the binary label for species (AG or AR).
+
+#### Spot-checking baseline performance of various algorithms
+
+With output category consisting of ages [1, 3, 5, 7, 9, old], XGB achieved the
+best prediction accuracy at baseline settings:
+
+![Spotchecking age](plots/spot_check_species_rus.png)
+
+Both random forest and xgboost performed well here.
+
+#### After tuning Random Forest parameters
+
+Accuracy on test set:84.67%
+
+Classification report:
+
+|             | precision | recall | f1-score | support |
+|:------------|:----------|:-------|:---------|:--------|
+| AG          | 0.82      | 0.88   | 0.85     | 255     |
+| AR          | 0.88      | 0.82   | 0.84     | 267     |
+| avg / total | 0.85      | 0.85   | 0.85     | 522     |
+
+#### Confusion matrix
+
+![Confusion matrix Species_Age](plots/RF_CM_species_rus.png)
+
+
+#### After tuning XGBoost parameters
+
+Accuracy on test set:85.25%
+
+Classification report:
+
+|             | precision | recall | f1-score | support |
+|:------------|:----------|:-------|:---------|:--------|
+| AG          | 0.84      | 0.86   | 0.85     | 255     |
+| AR          | 0.87      | 0.84   | 0.85     | 267     |
+| avg / total | 0.85      | 0.85   | 0.85     | 522     |
+
+#### Confusion matrix
+
+![Confusion matrix Species_Age](plots/xgb_CM_species_rus.png)
+
+#### Top features
+
+Three wavelengths stood out as being particularly important to the prediction:
+'525.57926', '3855.53371', '1900.76462', '1028.97811'
+
+Ranked by decreasing importance:
+
+![Feature importances](plots/xgb_feat_imp_species_rus.png)
+
+### Predict age after species 

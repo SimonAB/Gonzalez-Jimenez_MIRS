@@ -538,206 +538,6 @@ plt.savefig("./plots/spot_check_species_rus.png", bbox_inches="tight")
 
 ```
 
-
-# Optimising Gradient boosting with XGB
-
-```python
-
-# Parameter search
-
-# features & labels
-X = df_species.astype(float)
-y = df_species.index
-
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-# cross-val settings
-seed = 4
-validation_size = 0.3
-num_splits = 10
-scoring = "accuracy"
-
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_resampled, y_resampled)
-
-# base algorithm settings
-classifier = XGBClassifier(nthread=1)
-
-# define hyperparameter space to test
-# for troubleshooting:
-# max_depth = [2, 4]
-# n_estimators = [100, 400, 500]
-# learning_rate = [0.01, 0.1]
-# colsample_bytree = [0.1, 1]
-
-# the real deal:
-max_depth = [2, 4, 6, 8]  # 4?
-n_estimators = [100, 300, 500, 800]  # 400?
-learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
-colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
-
-
-parameters = {"max_depth": max_depth,
-              "learning_rate": learning_rate,
-              "n_estimators": n_estimators,
-              "colsample_bytree": colsample_bytree}
-
-# Grid search
-start = time()
-gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
-scoring=scoring, n_jobs=-1, cv=sss)
-
-gsCV_result = gsCV.fit(X_resampled, y_resampled)
-elapsed = time() - start
-
-# # results
-print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
-cv_report(gsCV_result.cv_results_)
-
-# Random search
-# n_iter_search = 20
-# random_search = RandomizedSearchCV(
-#     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
-# start = time()
-# random_search.fit(X, y)
-# elapsed = time() - start
-
-# results
-# print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
-    # elapsed / 60, elapsed))
-# cv_report(gsCV_result.cv_results_)
-
-# means, stdevs = [], []
-# for params, mean_score, scores in gsCV_result.grid_scores_:
-#     stdev = scores.std()
-#     means.append(mean_score)
-#     stdevs.append(stdev)
-#     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
-
-```
-Time elapsed: 51.20 minutes (3072.1 sec)
-Model with rank: 1
-Mean validation score: 84.817% ± 1.405%
-Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.7, 'max_depth': 8}
-
-Model with rank: 2
-Mean validation score: 84.753% ± 1.335%
-Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.7, 'max_depth': 6}
-
-Model with rank: 3
-Mean validation score: 84.689% ± 1.155%
-Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.4, 'max_depth': 4}
-
-# Finalising model
-```python
-# features & labels
-X = df_species.astype(float)
-y = df_species.index
-
-# encode Y class values as integers
-# label_encoder = LabelEncoder()
-# label_encoder = label_encoder.fit(y)
-# label_encoded_y = label_encoder.transform(y)
-
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-# cross-val settings
-seed = 4
-validation_size = 0.25
-num_splits = 10
-
-# splitting dataset
-X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=validation_size, stratify=None, random_state=seed)
-
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_train, y_train)
-
-# preparing model
-classifier = XGBClassifier(n_estimators=800,
-                           max_depth=8,
-                           learning_rate=0.2,
-                           colsample_bytree=0.7,
-                           nthread=1)
-
-# Pipeline
-model = classifier
-
-# LEARN!
-start = time()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-elapsed = time() - start
-
-print("Time elapsed: {0:.2f} seconds".format(elapsed))
-print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
-    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
-
-```
-Time elapsed: 1.11 seconds
-Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.7,
-       gamma=0, learning_rate=0.2, max_delta_step=0, max_depth=8,
-       min_child_weight=1, missing=None, n_estimators=800, nthread=1,
-       objective='binary:logistic', reg_alpha=0, reg_lambda=1,
-       scale_pos_weight=1, seed=0, silent=True, subsample=1)
-
-Accuracy on test set:85.25%
-
-Classification report:
-             precision    recall  f1-score   support
-
-         AG       0.84      0.86      0.85       255
-         AR       0.87      0.84      0.85       267
-
-avg / total       0.85      0.85      0.85       522
-
-# Confusion matrix
-
-```python
-# class_names = y_test.sort_values().unique()
-class_names = ["AG", "AR"]
-cm = confusion_matrix(y_test, y_pred)
-np.set_printoptions(precision=2)
-
-# print(y_test.unique())
-# print(cm)
-plt.figure()
-plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
-plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len( class_names) - 1, (len(class_names) - 0.2)], color="darkblue", style="italic", size="small")
-
-plt.savefig("./plots/xgb_CM_species_rus.png", bbox_inches="tight")
-
-```
-
-# Feature Importances
-
-```python
-fig = xgb.plot_importance(model,
-                    # importance_type="gain",
-                    height=0.4,
-                    title="Importance of predictor of species",
-                    # xlabel="Average gain when feature is used",
-                    ylabel="")
-
-plt.savefig("./plots/xgb_feat_imp_species_rus.png", bbox_inches="tight")
-```
-
-List of top features:
-
-```python
-print(df_species.columns[[17, 0, 5, 15]])
-```
-Index(['525.57926', '3855.53371', '1900.76462', '1028.97811'], dtype='object')
-
-
-
 # Optimising Gradient boosting with RandomForestClassifier
 
 ```python
@@ -905,3 +705,200 @@ plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 
 plt.savefig("./plots/RF_CM_species_rus.png", bbox_inches="tight")
 
 ```
+
+# Optimising Gradient boosting with XGB
+
+```python
+
+# Parameter search
+
+# features & labels
+X = df_species.astype(float)
+y = df_species.index
+
+# under-sample over-represented classes
+rus = RandomUnderSampler(random_state=34)
+X_resampled, y_resampled = rus.fit_sample(X, y)
+
+# cross-val settings
+seed = 4
+validation_size = 0.3
+num_splits = 10
+scoring = "accuracy"
+
+# cross validation algorithm
+sss = StratifiedShuffleSplit(
+    n_splits=num_splits, test_size=validation_size, random_state=seed)
+sss.split(X_resampled, y_resampled)
+
+# base algorithm settings
+classifier = XGBClassifier(nthread=1)
+
+# define hyperparameter space to test
+# for troubleshooting:
+# max_depth = [2, 4]
+# n_estimators = [100, 400, 500]
+# learning_rate = [0.01, 0.1]
+# colsample_bytree = [0.1, 1]
+
+# the real deal:
+max_depth = [2, 4, 6, 8]  # 4?
+n_estimators = [100, 300, 500, 800]  # 400?
+learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
+colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
+
+
+parameters = {"max_depth": max_depth,
+              "learning_rate": learning_rate,
+              "n_estimators": n_estimators,
+              "colsample_bytree": colsample_bytree}
+
+# Grid search
+start = time()
+gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+scoring=scoring, n_jobs=-1, cv=sss)
+
+gsCV_result = gsCV.fit(X_resampled, y_resampled)
+elapsed = time() - start
+
+# # results
+print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
+cv_report(gsCV_result.cv_results_)
+
+# Random search
+# n_iter_search = 20
+# random_search = RandomizedSearchCV(
+#     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
+# start = time()
+# random_search.fit(X, y)
+# elapsed = time() - start
+
+# results
+# print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+    # elapsed / 60, elapsed))
+# cv_report(gsCV_result.cv_results_)
+
+# means, stdevs = [], []
+# for params, mean_score, scores in gsCV_result.grid_scores_:
+#     stdev = scores.std()
+#     means.append(mean_score)
+#     stdevs.append(stdev)
+#     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
+
+```
+Time elapsed: 51.20 minutes (3072.1 sec)
+Model with rank: 1
+Mean validation score: 84.817% ± 1.405%
+Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.7, 'max_depth': 8}
+
+Model with rank: 2
+Mean validation score: 84.753% ± 1.335%
+Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.7, 'max_depth': 6}
+
+Model with rank: 3
+Mean validation score: 84.689% ± 1.155%
+Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.4, 'max_depth': 4}
+
+# Finalising model
+```python
+# features & labels
+X = df_species
+y = df_species.index
+
+# encode Y class values as integers
+# label_encoder = LabelEncoder()
+# label_encoder = label_encoder.fit(y)
+# label_encoded_y = label_encoder.transform(y)
+
+# under-sample over-represented classes
+rus = RandomUnderSampler(random_state=34)
+X_resampled, y_resampled = rus.fit_sample(X, y)
+
+# cross-val settings
+seed = 4
+validation_size = 0.25
+num_splits = 10
+
+# splitting dataset
+X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=validation_size, stratify=None, random_state=seed)
+
+# cross validation algorithm
+sss = StratifiedShuffleSplit(
+    n_splits=num_splits, test_size=validation_size, random_state=seed)
+sss.split(X_train, y_train)
+
+# preparing model
+classifier = XGBClassifier(n_estimators=800,
+                           max_depth=8,
+                           learning_rate=0.2,
+                           colsample_bytree=0.7,
+                           nthread=1)
+
+# Pipeline
+model = classifier
+
+# LEARN!
+start = time()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+elapsed = time() - start
+
+print("Time elapsed: {0:.2f} seconds".format(elapsed))
+print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+
+```
+Time elapsed: 1.11 seconds
+Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.7,
+       gamma=0, learning_rate=0.2, max_delta_step=0, max_depth=8,
+       min_child_weight=1, missing=None, n_estimators=800, nthread=1,
+       objective='binary:logistic', reg_alpha=0, reg_lambda=1,
+       scale_pos_weight=1, seed=0, silent=True, subsample=1)
+
+Accuracy on test set:85.25%
+
+Classification report:
+             precision    recall  f1-score   support
+
+         AG       0.84      0.86      0.85       255
+         AR       0.87      0.84      0.85       267
+
+avg / total       0.85      0.85      0.85       522
+
+# Confusion matrix
+
+```python
+# class_names = y_test.sort_values().unique()
+class_names = ["AG", "AR"]
+cm = confusion_matrix(y_test, y_pred)
+np.set_printoptions(precision=2)
+
+# print(y_test.unique())
+# print(cm)
+plt.figure()
+plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
+plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len( class_names) - 1, (len(class_names) - 0.2)], color="darkblue", style="italic", size="small")
+
+plt.savefig("./plots/xgb_CM_species_rus.png", bbox_inches="tight")
+
+```
+
+# Feature Importances
+
+```python
+fig = xgb.plot_importance(model,
+                    # importance_type="gain",
+                    height=0.4,
+                    title="Importance of predictor of species",
+                    # xlabel="Average gain when feature is used",
+                    ylabel="")
+
+plt.savefig("./plots/xgb_feat_imp_species_rus.png", bbox_inches="tight")
+```
+
+List of top features:
+
+```python
+print(df_species.columns[[17, 0, 5, 15]])
+```
+Index(['525.57926', '3855.53371', '1900.76462', '1028.97811'], dtype='object')
