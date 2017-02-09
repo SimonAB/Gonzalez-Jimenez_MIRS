@@ -111,11 +111,34 @@ Classification report:
 
 #### Top features
 
-Three wavelengths stood out as being particularly important to the prediction:
+Four wavelengths stood out as being particularly important to the prediction:
 '525.57926', '3855.53371', '1900.76462', '1028.97811'
 
 Ranked by decreasing importance:
 
 ![Feature importances](plots/xgb_feat_imp_species_rus.png)
 
-### Predict age after species 
+### Predict age from both species
+
+#### Spot-checking baseline performance of various algorithms
+
+With output category consisting of ages [1, 3, 5, 7, 9, old], XGB achieved the
+best prediction accuracy at baseline settings:
+
+![Spotchecking age](plots/spot_check_age_rus_AGandAR.png)
+
+#### After tuning XGBoost parameters
+
+#### Confusion matrix
+
+![Confusion matrix Species_Age](plots/xgb_CM_age_rus_AGandAR.png)
+
+#### Top features
+
+Ranked by decreasing importance:
+
+![Feature importances](plots/xgb_feat_imp_age_rus_AGandAR.png)
+
+
+Four wavelengths stood out as being particularly important to the prediction:
+'3855.53371', '1900.76462', '1745.50175', '2922.99216'
