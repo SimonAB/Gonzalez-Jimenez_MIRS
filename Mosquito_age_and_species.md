@@ -142,3 +142,66 @@ Ranked by decreasing importance:
 
 Four wavelengths stood out as being particularly important to the prediction:
 '3855.53371', '1900.76462', '1745.50175', '2922.99216'
+
+
+### Predicting age separately for AG ad AR
+I then built 2 separate models of age: one selecting only AG and the other with only AR.
+
+#### Predicting age of AG
+
+#### Spot-checking baseline performance of various algorithms
+
+With output category consisting of ages [1, 3, 5, 7, 9, old], XGB achieved the
+best prediction accuracy at baseline settings:
+
+![Spotchecking age](plots/spot_check_age_rus_AG.png)
+
+#### After tuning XGBoost parameters
+
+#### Confusion matrix
+
+![Confusion matrix Species_Age](plots/xgb_CM_age_rus_AG.png)
+
+#### Top features
+
+Ranked by decreasing importance:
+
+![Feature importances](plots/xgb_feat_imp_age_rus_AG.png)
+
+
+Four wavelengths stood out as being particularly important to the prediction:
+
+
+
+#### Predicting age of AR
+
+#### Spot-checking baseline performance of various algorithms
+
+With output category consisting of ages [1, 3, 5, 7, 9, old], XGB achieved the
+best prediction accuracy at baseline settings:
+
+![Spotchecking age](plots/spot_check_age_rus_AR.png)
+
+#### After tuning XGBoost parameters
+
+#### Confusion matrix
+
+![Confusion matrix Species_Age](plots/xgb_CM_age_rus_AR.png)
+
+#### Top features
+
+Ranked by decreasing importance:
+
+![Feature importances](plots/xgb_feat_imp_age_rus_AR.png)
+
+
+Three wavelengths stood out as being particularly important to the prediction:
+'1900.76462', '1745.50175', '3855.53371'
+
+### Conclusions
+
+1. Predicting age and species at the same time yields an accuracy of **47%**.
+2. However, using the full dataset (which includes *Anopheles gambiae* and *Anopheles arabiensis*), to predict species alone achieves **85.25%** accuracy (xgboost)
+3. predicting age using both AG and AR achieves **52%** accuracy
+4. predicting age using AG only achieves **71%** accuracy
+5. predicting age using AR only achieves **71.5%** accuracy
