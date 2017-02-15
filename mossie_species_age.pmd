@@ -179,6 +179,26 @@ df_species_age.index = df_species_age["Species"] + "_" + df_species_age["Age"]
 
 df_species_age = df_species_age.ix[:,5:-1]
 
+# import field test dataset
+df_fieldtest = pd.read_table("field_mosquitoes_spectra.dat")
+df_fieldtest = df_fieldtest[df_fieldtest["Status"] == "BA"]
+
+df_fieldtest_species_age = df_fieldtest.copy()
+df_fieldtest_species_age.index = df_fieldtest_species_age["Species"] + "_" + df_fieldtest_species_age["Age"]
+df_fieldtest_species_age = df_fieldtest_species_age.ix[:,5:-1]
+df_fieldtest_species_age[df_fieldtest_species_age.columns] = StandardScaler().fit_transform(df_fieldtest_species_age[df_fieldtest_species_age.columns].as_matrix())
+
+
+df_fieldtest_age = df_fieldtest.copy()
+df_fieldtest_age.index = df_fieldtest_age["Age"]
+df_fieldtest_age = df_fieldtest_age.ix[:,5:-1]
+df_fieldtest_age[df_fieldtest_age.columns] = StandardScaler().fit_transform(df_fieldtest_age[df_fieldtest_age.columns].as_matrix())
+
+df_fieldtest_species = df_fieldtest.copy()
+df_fieldtest_species.index = df_fieldtest_species["Species"]
+df_fieldtest_species = df_fieldtest_species.ix[:,5:-1]
+df_fieldtest_species[df_fieldtest_species.columns] = StandardScaler().fit_transform(df_fieldtest_species[df_fieldtest_species.columns].as_matrix())
+
 # transform data
 df_species_age[df_species_age.columns] = StandardScaler().fit_transform(df_species_age[df_species_age.columns].as_matrix())
 
@@ -198,7 +218,6 @@ df_age_AG = df_age_AG.ix[:,5:-1]
 df_age_AG[df_age_AG.columns] = StandardScaler().fit_transform(df_age_AG[df_age_AG.columns].as_matrix())
 df_age_AG.tail()
 
-
 # select age of AR data
 df_age_AR = df_full.copy()
 df_age_AR.index = df_age_AR["Age"]
@@ -207,8 +226,6 @@ df_age_AR = df_age_AR.ix[:,5:-1]
 # transform data
 df_age_AR[df_age_AR.columns] = StandardScaler().fit_transform(df_age_AR[df_age_AR.columns].as_matrix())
 df_age_AR.tail()
-
-
 
 # select species data
 df_species = df_full.copy()
@@ -235,6 +252,9 @@ y = df_species_age.index
 # under-sample over-represented classes
 rus = RandomUnderSampler(random_state=34)
 X_resampled, y_resampled = rus.fit_sample(X, y)
+
+X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+y_resampled_df = X_resampled_df.index
 
 # cross-val settings
 seed = 4
@@ -265,8 +285,8 @@ for name, model in models:
     # not contain infs or NaNs
     sss = StratifiedShuffleSplit(
         n_splits=num_splits, test_size=validation_size, random_state=seed)
-    sss.split(X_resampled, y_resampled)
-    cv_results = cross_val_score(model, X_resampled, y_resampled, cv=sss, scoring=scoring)
+    sss.split(X_resampled_df, y_resampled_df)
+    cv_results = cross_val_score(model, X_resampled_df, y_resampled_df, cv=sss, scoring=scoring)
     results.append(cv_results)
     names.append(name)
     msg = "Cross val score for {0}: {1:.2%} ± {2:.2%}".format(
@@ -300,6 +320,9 @@ y = df_species_age.index
 rus = RandomUnderSampler(random_state=34)
 X_resampled, y_resampled = rus.fit_sample(X, y)
 
+X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+y_resampled_df = X_resampled_df.index
+
 # cross-val settings
 seed = 4
 validation_size = 0.3
@@ -309,7 +332,7 @@ scoring = "accuracy"
 # cross validation algorithm
 sss = StratifiedShuffleSplit(
     n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_resampled, y_resampled)
+sss.split(X_resampled_df, y_resampled_df)
 
 # base algorithm settings
 classifier = XGBClassifier(nthread=1)
@@ -338,7 +361,7 @@ start = time()
 gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
 scoring=scoring, n_jobs=-1, cv=sss)
 
-gsCV_result = gsCV.fit(X_resampled, y_resampled)
+gsCV_result = gsCV.fit(X_resampled_df, y_resampled_df)
 elapsed = time() - start
 
 # # results
@@ -394,13 +417,19 @@ y = df_species_age.index
 rus = RandomUnderSampler(random_state=34)
 X_resampled, y_resampled = rus.fit_sample(X, y)
 
+X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+y_resampled_df = X_resampled_df.index
+
+
+
 # cross-val settings
+
 seed = 4
 validation_size = 0.25
 num_splits = 10
 
 # splitting dataset
-X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=validation_size, stratify=None, random_state=seed)
+X_train, X_test, y_train, y_test = train_test_split(X_resampled_df, y_resampled_df, test_size=validation_size, stratify=None, random_state=seed)
 
 # cross validation algorithm
 sss = StratifiedShuffleSplit(
@@ -428,37 +457,36 @@ print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}
     model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
 
 ```
-Time elapsed: 0.51 seconds
+Time elapsed: 0.54 seconds
 Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=1,
        gamma=0, learning_rate=0.3, max_delta_step=0, max_depth=6,
        min_child_weight=1, missing=None, n_estimators=100, nthread=1,
        objective='multi:softprob', reg_alpha=0, reg_lambda=1,
        scale_pos_weight=1, seed=0, silent=True, subsample=1)
 
-Accuracy on test set:47.83%
+Accuracy on test set:48.55%
 
 Classification report:
              precision    recall  f1-score   support
 
-       AG_1       0.58      0.78      0.67         9
-       AG_3       0.36      0.62      0.46        13
-       AG_5       0.50      0.81      0.62        16
-       AG_7       0.45      0.38      0.42        13
-     AG_old       0.45      0.28      0.34        18
-       AR_1       0.88      0.41      0.56        17
-       AR_3       0.40      0.67      0.50         9
-       AR_5       0.44      0.31      0.36        13
+       AG_1       0.80      0.89      0.84         9
+       AG_3       0.40      0.62      0.48        13
+       AG_5       0.50      0.67      0.57         9
+       AG_7       0.64      0.54      0.58        13
+     AG_old       0.12      0.06      0.08        17
+       AR_1       0.60      0.75      0.67        16
+       AR_3       0.79      0.61      0.69        18
+       AR_5       0.18      0.15      0.17        13
        AR_7       0.47      0.41      0.44        17
-     AR_old       0.44      0.31      0.36        13
+     AR_old       0.29      0.38      0.33        13
 
-avg / total       0.51      0.48      0.47       138
+avg / total       0.47      0.49      0.47       138
 
 # Confusion matrix
 
 ```python
-# class_names = y_test.sort_values().unique()
-class_names = ["AG_1", "AG_3", "AG_5", "AG_7", "AG_old", "AR_1", "AR_3",
-"AR_5", "AR_7", "AR_old"]
+class_names = y_test.sort_values().unique()
+# class_names = ["AG_1", "AG_3", "AG_5", "AG_7", "AG_old", "AR_1", "AR_3", "AR_5", "AR_7", "AR_old"]
 cm = confusion_matrix(y_test, y_pred)
 np.set_printoptions(precision=2)
 
@@ -485,12 +513,43 @@ fig = xgb.plot_importance(model,
 plt.savefig("./plots/xgb_feat_imp_species_age_rus.png", bbox_inches="tight")
 ```
 
-List of top features:
-
+# Field test
 ```python
-print(df_species_age.columns[[5, 0, 6]])
-```
+X_test = df_fieldtest_species_age
+y_test = df_fieldtest_species_age.index
 
+y_pred = model.predict(X_test)
+elapsed = time() - start
+
+print("Time elapsed: {0:.2f} seconds".format(elapsed))
+print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+```
+Time elapsed: 139.61 seconds
+Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=1,
+       gamma=0, learning_rate=0.3, max_delta_step=0, max_depth=6,
+       min_child_weight=1, missing=None, n_estimators=100, nthread=1,
+       objective='multi:softprob', reg_alpha=0, reg_lambda=1,
+       scale_pos_weight=1, seed=0, silent=True, subsample=1)
+
+
+Classification report:
+             precision    recall  f1-score   support
+
+       AG_1       0.33      0.17      0.22         6
+       AG_3       0.50      0.20      0.29        10
+       AG_5       0.33      0.11      0.17         9
+       AG_7       0.00      0.00      0.00        10
+     AG_old       0.00      0.00      0.00         0
+       AR_1       0.00      0.00      0.00         0
+       AR_3       0.00      0.00      0.00         0
+       AR_5       0.00      0.00      0.00         0
+       AR_7       0.00      0.00      0.00         0
+     AR_old       0.00      0.00      0.00         0
+
+avg / total       0.29      0.11      0.16        35
+/Users/s_a_b/anaconda3/lib/python3.5/site-packages/sklearn/metrics/classification.py:1115: UndefinedMetricWarning: Recall and F-score are ill-defined and being set to 0.0 in labels with no true samples.
+  'recall', 'true', average, warn_for)
 
 #########################################
 # PREDICTING SPECIES
@@ -506,6 +565,9 @@ y = df_species.index
 # under-sample over-represented classes
 rus = RandomUnderSampler(random_state=34)
 X_resampled, y_resampled = rus.fit_sample(X, y)
+
+X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+y_resampled_df = X_resampled_df.index
 
 # cross-val settings
 seed = 4
@@ -536,8 +598,8 @@ for name, model in models:
     # not contain infs or NaNs
     sss = StratifiedShuffleSplit(
         n_splits=num_splits, test_size=validation_size, random_state=seed)
-    sss.split(X_resampled, y_resampled)
-    cv_results = cross_val_score(model, X_resampled, y_resampled, cv=sss, scoring=scoring)
+    sss.split(X_resampled_df, y_resampled_df)
+    cv_results = cross_val_score(model, X_resampled_df, y_resampled_df, cv=sss, scoring=scoring)
     results.append(cv_results)
     names.append(name)
     msg = "Cross val score for {0}: {1:.2%} ± {2:.2%}".format(
@@ -571,6 +633,9 @@ y = df_species.index
 rus = RandomUnderSampler(random_state=34)
 X_resampled, y_resampled = rus.fit_sample(X, y)
 
+X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+y_resampled_df = X_resampled_df.index
+
 # cross-val settings
 seed = 4
 validation_size = 0.3
@@ -580,7 +645,7 @@ scoring = "accuracy"
 # cross validation algorithm
 sss = StratifiedShuffleSplit(
     n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_resampled, y_resampled)
+sss.split(X_resampled_df, y_resampled_df)
 
 # base algorithm settings
 classifier = RandomForestClassifier(n_jobs=-1)
@@ -599,7 +664,7 @@ start = time()
 gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
 scoring=scoring, n_jobs=-1, cv=sss)
 
-gsCV_result = gsCV.fit(X_resampled, y_resampled)
+gsCV_result = gsCV.fit(X_resampled_df, y_resampled_df)
 elapsed = time() - start
 
 # # results
@@ -628,18 +693,18 @@ cv_report(gsCV_result.cv_results_)
 
 ```
 
-Time elapsed: 2.49 minutes (149.7 sec)
+Time elapsed: 2.79 minutes (167.6 sec)
 Model with rank: 1
-Mean validation score: 83.285% ± 1.463%
-Parameters: {'min_samples_split': 3, 'max_features': 0.3, 'n_estimators': 500}
+Mean validation score: 83.238% ± 1.649%
+Parameters: {'min_samples_split': 3, 'n_estimators': 800, 'max_features': 0.3}
 
 Model with rank: 2
-Mean validation score: 83.174% ± 1.361%
-Parameters: {'min_samples_split': 3, 'max_features': 'sqrt', 'n_estimators': 800}
+Mean validation score: 83.222% ± 1.508%
+Parameters: {'min_samples_split': 3, 'n_estimators': 100, 'max_features': 'sqrt'}
 
 Model with rank: 3
-Mean validation score: 83.158% ± 1.614%
-Parameters: {'min_samples_split': 3, 'max_features': 'log2', 'n_estimators': 500}
+Mean validation score: 83.206% ± 1.439%
+Parameters: {'min_samples_split': 5, 'n_estimators': 800, 'max_features': 0.3}
 
 # Finalising model
 ```python
@@ -656,13 +721,16 @@ y = df_species.index
 rus = RandomUnderSampler(random_state=34)
 X_resampled, y_resampled = rus.fit_sample(X, y)
 
+X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+y_resampled_df = X_resampled_df.index
+
 # cross-val settings
 seed = 4
 validation_size = 0.25
 num_splits = 10
 
 # splitting dataset
-X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=validation_size, stratify=None, random_state=seed)
+X_train, X_test, y_train, y_test = train_test_split(X_resampled_df, y_resampled_df, test_size=validation_size, stratify=None, random_state=seed)
 
 # cross validation algorithm
 sss = StratifiedShuffleSplit(
@@ -710,8 +778,8 @@ avg / total       0.85      0.85      0.85       522
 # Confusion matrix
 
 ```python
-# class_names = y_test.sort_values().unique()
-class_names = ["AG", "AR"]
+class_names = y_test.sort_values().unique()
+# class_names = ["AG", "AR"]
 cm = confusion_matrix(y_test, y_pred)
 np.set_printoptions(precision=2)
 
@@ -724,6 +792,7 @@ plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 
 plt.savefig("./plots/RF_CM_species_rus.png", bbox_inches="tight")
 
 ```
+
 
 # Optimising Gradient boosting with XGB
 
@@ -833,13 +902,16 @@ y = df_species.index
 rus = RandomUnderSampler(random_state=34)
 X_resampled, y_resampled = rus.fit_sample(X, y)
 
+X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+y_resampled_df = X_resampled_df.index
+
 # cross-val settings
 seed = 4
 validation_size = 0.25
 num_splits = 10
 
 # splitting dataset
-X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=validation_size, stratify=None, random_state=seed)
+X_train, X_test, y_train, y_test = train_test_split(X_resampled_df, y_resampled_df, test_size=validation_size, stratify=None, random_state=seed)
 
 # cross validation algorithm
 sss = StratifiedShuffleSplit(
@@ -887,8 +959,8 @@ avg / total       0.85      0.85      0.85       522
 # Confusion matrix
 
 ```python
-# class_names = y_test.sort_values().unique()
-class_names = ["AG", "AR"]
+class_names = y_test.sort_values().unique()
+# class_names = ["AG", "AR"]
 cm = confusion_matrix(y_test, y_pred)
 np.set_printoptions(precision=2)
 
@@ -922,6 +994,35 @@ print(df_species.columns[[17, 0, 5, 15]])
 ```
 Index(['525.57926', '3855.53371', '1900.76462', '1028.97811'], dtype='object')
 
+# Field test
+```python
+X_test = df_fieldtest_species
+y_test = df_fieldtest_species.index
+
+start = time()
+y_pred = model.predict(X_test)
+elapsed = time() - start
+
+print("Time elapsed: {0:.2f} seconds".format(elapsed))
+print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+```
+Time elapsed: 0.00 seconds
+Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.7,
+       gamma=0, learning_rate=0.2, max_delta_step=0, max_depth=8,
+       min_child_weight=1, missing=None, n_estimators=800, nthread=1,
+       objective='binary:logistic', reg_alpha=0, reg_lambda=1,
+       scale_pos_weight=1, seed=0, silent=True, subsample=1)
+
+
+Classification report:
+             precision    recall  f1-score   support
+
+         AG       1.00      0.49      0.65        35
+         AR       0.00      0.00      0.00         0
+
+avg / total       1.00      0.49      0.65        35
+
 
 #########################################
 # PREDICTING AGE USING BOTH SPECIES
@@ -937,6 +1038,9 @@ y = df_age.index
 # under-sample over-represented classes
 rus = RandomUnderSampler(random_state=34)
 X_resampled, y_resampled = rus.fit_sample(X, y)
+
+X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+y_resampled_df = X_resampled_df.index
 
 # cross-val settings
 seed = 4
@@ -967,8 +1071,8 @@ for name, model in models:
     # not contain infs or NaNs
     sss = StratifiedShuffleSplit(
         n_splits=num_splits, test_size=validation_size, random_state=seed)
-    sss.split(X_resampled, y_resampled)
-    cv_results = cross_val_score(model, X_resampled, y_resampled, cv=sss, scoring=scoring)
+    sss.split(X_resampled_df, y_resampled_df)
+    cv_results = cross_val_score(model, X_resampled_df, y_resampled_df, cv=sss, scoring=scoring)
     results.append(cv_results)
     names.append(name)
     msg = "Cross val score for {0}: {1:.2%} ± {2:.2%}".format(
@@ -1000,6 +1104,9 @@ y = df_age.index
 rus = RandomUnderSampler(random_state=34)
 X_resampled, y_resampled = rus.fit_sample(X, y)
 
+X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+y_resampled_df = X_resampled_df.index
+
 # cross-val settings
 seed = 4
 validation_size = 0.3
@@ -1009,7 +1116,7 @@ scoring = "accuracy"
 # cross validation algorithm
 sss = StratifiedShuffleSplit(
     n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_resampled, y_resampled)
+sss.split(X_resampled_df, y_resampled_df)
 
 # base algorithm settings
 classifier = XGBClassifier(nthread=1)
@@ -1038,7 +1145,7 @@ start = time()
 gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
 scoring=scoring, n_jobs=-1, cv=sss)
 
-gsCV_result = gsCV.fit(X_resampled, y_resampled)
+gsCV_result = gsCV.fit(X_resampled_df, y_resampled_df)
 elapsed = time() - start
 
 # # results
@@ -1100,13 +1207,16 @@ y = df_age.index
 rus = RandomUnderSampler(random_state=34)
 X_resampled, y_resampled = rus.fit_sample(X, y)
 
+X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+y_resampled_df = X_resampled_df.index
+
 # cross-val settings
 seed = 4
 validation_size = 0.25
 num_splits = 10
 
 # splitting dataset
-X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=validation_size, stratify=None, random_state=seed)
+X_train, X_test, y_train, y_test = train_test_split(X_resampled_df, y_resampled_df, test_size=validation_size, stratify=None, random_state=seed)
 
 # cross validation algorithm
 sss = StratifiedShuffleSplit(
@@ -1134,32 +1244,32 @@ print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}
     model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
 
 ```
-Time elapsed: 0.29 seconds
+Time elapsed: 0.37 seconds
 Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.6,
        gamma=0, learning_rate=0.1, max_delta_step=0, max_depth=6,
        min_child_weight=1, missing=None, n_estimators=100, nthread=1,
        objective='multi:softprob', reg_alpha=0, reg_lambda=1,
        scale_pos_weight=1, seed=0, silent=True, subsample=1)
 
-Accuracy on test set:52.26%
+Accuracy on test set:59.30%
 
 Classification report:
              precision    recall  f1-score   support
 
-          1       0.61      0.78      0.68        36
-          3       0.55      0.56      0.55        43
-          5       0.69      0.59      0.64        46
-          7       0.38      0.62      0.47        29
-        old       0.32      0.16      0.21        45
+          1       0.78      0.86      0.82        36
+          3       0.71      0.59      0.64        46
+          5       0.59      0.49      0.54        45
+          7       0.37      0.59      0.45        29
+        old       0.55      0.49      0.52        43
 
-avg / total       0.51      0.52      0.50       199
+avg / total       0.61      0.59      0.60       199
 
 
 # Confusion matrix
 
 ```python
-# class_names = y_test.sort_values().unique()
-class_names = ["1", "3", "5", "7", "old"]
+class_names = y_test.sort_values().unique()
+# class_names = ["1", "3", "5", "7", "old"]
 cm = confusion_matrix(y_test, y_pred)
 np.set_printoptions(precision=2)
 
@@ -1194,6 +1304,25 @@ print(df_age.columns[[0, 5, 6, 3]])
 ```
 Index(['3855.53371', '1900.76462', '1745.50175', '2922.99216'], dtype='object')
 
+# Field test
+```python
+X_test = df_fieldtest_age
+y_test = df_fieldtest_age.index
+
+y_test
+start = time()
+y_pred = model.predict(X_test)
+elapsed = time() - start
+
+print("Time elapsed: {0:.2f} seconds".format(elapsed))
+print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+
+from sklearn import metrics
+metrics.precision_score(y_test, y_pred, average=None)
+
+```
+Precision: array([ 0.57,  0.33,  0.  ,  0.3 ,  0.  ])
 
 #########################################
 # PREDICTING AGE OF AG ONLY
