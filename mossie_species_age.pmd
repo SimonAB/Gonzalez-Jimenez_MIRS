@@ -1,10 +1,11 @@
-# import modules
+# Import modules
 
 ```python
 import os
 import glob
 import re
 from time import time
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -20,11 +21,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
 
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, confusion_matrix, mean_squared_error
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, confusion_matrix, precision_recall_fscore_support
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
@@ -61,6 +63,7 @@ from xgboost import XGBClassifier
 from xgboost import XGBRegressor
 
 from imblearn.under_sampling import RandomUnderSampler
+from imblearn.under_sampling import NearMiss
 from imblearn.ensemble import EasyEnsemble
 
 import matplotlib.pyplot as plt
@@ -171,33 +174,33 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
     plt.ylabel('Feature Importance Score')
 
 # import full dataset
-df_full = pd.read_table("./mosquitoes_spectra_SpeciesAndAges.dat")
+df_full = pd.read_table("./mosquitoes_spectra (170607).dat")
 
 # import species+age data
 df_species_age = df_full.copy()
 df_species_age.index = df_species_age["Species"] + "_" + df_species_age["Age"]
 
-df_species_age = df_species_age.ix[:,5:-1]
+df_species_age = df_species_age.iloc[:,5:-1]
 
 # import field test dataset
-df_fieldtest = pd.read_table("field_mosquitoes_spectra.dat")
-df_fieldtest = df_fieldtest[df_fieldtest["Status"] == "BA"]
+# df_fieldtest = pd.read_table("field_mosquitoes_spectra.dat")
+# df_fieldtest = df_fieldtest[df_fieldtest["Status"] == "BA"]
 
-df_fieldtest_species_age = df_fieldtest.copy()
-df_fieldtest_species_age.index = df_fieldtest_species_age["Species"] + "_" + df_fieldtest_species_age["Age"]
-df_fieldtest_species_age = df_fieldtest_species_age.ix[:,5:-1]
-df_fieldtest_species_age[df_fieldtest_species_age.columns] = StandardScaler().fit_transform(df_fieldtest_species_age[df_fieldtest_species_age.columns].as_matrix())
-
-
-df_fieldtest_age = df_fieldtest.copy()
-df_fieldtest_age.index = df_fieldtest_age["Age"]
-df_fieldtest_age = df_fieldtest_age.ix[:,5:-1]
-df_fieldtest_age[df_fieldtest_age.columns] = StandardScaler().fit_transform(df_fieldtest_age[df_fieldtest_age.columns].as_matrix())
-
-df_fieldtest_species = df_fieldtest.copy()
-df_fieldtest_species.index = df_fieldtest_species["Species"]
-df_fieldtest_species = df_fieldtest_species.ix[:,5:-1]
-df_fieldtest_species[df_fieldtest_species.columns] = StandardScaler().fit_transform(df_fieldtest_species[df_fieldtest_species.columns].as_matrix())
+# df_fieldtest_species_age = df_fieldtest.copy()
+# df_fieldtest_species_age.index = df_fieldtest_species_age["Species"] + "_" + df_fieldtest_species_age["Age"]
+# df_fieldtest_species_age = df_fieldtest_species_age.iloc[:,5:-1]
+# df_fieldtest_species_age[df_fieldtest_species_age.columns] = StandardScaler().fit_transform(df_fieldtest_species_age[df_fieldtest_species_age.columns].as_matrix())
+#
+#
+# df_fieldtest_age = df_fieldtest.copy()
+# df_fieldtest_age.index = df_fieldtest_age["Age"]
+# df_fieldtest_age = df_fieldtest_age.iloc[:,5:-1]
+# df_fieldtest_age[df_fieldtest_age.columns] = StandardScaler().fit_transform(df_fieldtest_age[df_fieldtest_age.columns].as_matrix())
+#
+# df_fieldtest_species = df_fieldtest.copy()
+# df_fieldtest_species.index = df_fieldtest_species["Species"]
+# df_fieldtest_species = df_fieldtest_species.iloc[:,5:-1]
+# df_fieldtest_species[df_fieldtest_species.columns] = StandardScaler().fit_transform(df_fieldtest_species[df_fieldtest_species.columns].as_matrix())
 
 # transform data
 df_species_age[df_species_age.columns] = StandardScaler().fit_transform(df_species_age[df_species_age.columns].as_matrix())
@@ -205,7 +208,7 @@ df_species_age[df_species_age.columns] = StandardScaler().fit_transform(df_speci
 # select age data
 df_age = df_full.copy()
 df_age.index = df_age["Age"]
-df_age = df_age.ix[:,5:-1]
+df_age = df_age.iloc[:,5:-1]
 # transform data
 df_age[df_age.columns] = StandardScaler().fit_transform(df_age[df_age.columns].as_matrix())
 
@@ -213,7 +216,7 @@ df_age[df_age.columns] = StandardScaler().fit_transform(df_age[df_age.columns].a
 df_age_AG = df_full.copy()
 df_age_AG.index = df_age_AG["Age"]
 df_age_AG = df_age_AG[df_age_AG["Species"] == "AG"]
-df_age_AG = df_age_AG.ix[:,5:-1]
+df_age_AG = df_age_AG.iloc[:,5:-1]
 # transform data
 df_age_AG[df_age_AG.columns] = StandardScaler().fit_transform(df_age_AG[df_age_AG.columns].as_matrix())
 df_age_AG.tail()
@@ -222,7 +225,7 @@ df_age_AG.tail()
 df_age_AR = df_full.copy()
 df_age_AR.index = df_age_AR["Age"]
 df_age_AR = df_age_AR[df_age_AR["Species"] == "AR"]
-df_age_AR = df_age_AR.ix[:,5:-1]
+df_age_AR = df_age_AR.iloc[:,5:-1]
 # transform data
 df_age_AR[df_age_AR.columns] = StandardScaler().fit_transform(df_age_AR[df_age_AR.columns].as_matrix())
 df_age_AR.tail()
@@ -230,12 +233,10 @@ df_age_AR.tail()
 # select species data
 df_species = df_full.copy()
 df_species.index = df_species["Species"]
-
-df_species = df_species.ix[:,5:-1]
+df_species = df_species.iloc[:,5:-1]
 
 # transform species data
 df_species[df_species.columns] = StandardScaler().fit_transform(df_species[df_species.columns].as_matrix())
-
 ```
 
 #########################################
@@ -249,12 +250,16 @@ df_species[df_species.columns] = StandardScaler().fit_transform(df_species[df_sp
 X = df_species_age.astype(float)
 y = df_species_age.index
 
+Counter(y)
+
 # under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
+rus = NearMiss(random_state=4, ratio={"AG_1":55, "AG_3":141, "AG_5":115, "AG_7":121, "AG_old":130, "AR_1":66, "AR_3":97, "AR_5":96, "AR_7":155, "AR_old":130})
 X_resampled, y_resampled = rus.fit_sample(X, y)
 
 X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
 y_resampled_df = X_resampled_df.index
+#
+# Counter(y_resampled_df)
 
 # cross-val settings
 seed = 4
@@ -285,8 +290,8 @@ for name, model in models:
     # not contain infs or NaNs
     sss = StratifiedShuffleSplit(
         n_splits=num_splits, test_size=validation_size, random_state=seed)
-    sss.split(X_resampled_df, y_resampled_df)
-    cv_results = cross_val_score(model, X_resampled_df, y_resampled_df, cv=sss, scoring=scoring)
+    sss.split(X, y)
+    cv_results = cross_val_score(model, X, y, cv=sss, scoring=scoring)
     results.append(cv_results)
     names.append(name)
     msg = "Cross val score for {0}: {1:.2%} ± {2:.2%}".format(
@@ -306,250 +311,145 @@ plt.savefig("./plots/spot_check_species_age_rus.png", bbox_inches="tight")
 ```
 
 
-# Optimising Gradient boosting with XGBoost
+# Big loop
 
 ```python
-
-# Parameter search
-
-# features & labels
-X = df_species_age.astype(float)
+# determine size of data to use
+X = df_species_age.values
 y = df_species_age.index
 
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
-y_resampled_df = X_resampled_df.index
-
-# cross-val settings
+# cross validation
 seed = 4
 validation_size = 0.3
-num_splits = 10
+num_splits = 5
+num_repeats = 5
+num_rounds = 5
 scoring = "accuracy"
 
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_resampled_df, y_resampled_df)
-
-# base algorithm settings
-classifier = XGBClassifier(nthread=1)
-
-# define hyperparameter space to test
-# for troubleshooting:
-# max_depth = [2, 4]
-# n_estimators = [100, 400, 500]
-# learning_rate = [0.01, 0.1]
-# colsample_bytree = [0.1, 1]
-
-# the real deal:
-max_depth = [2, 4, 6, 8]  # 4?
-n_estimators = [100, 300, 500, 800]  # 400?
-learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
-colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
-
-
-parameters = {"max_depth": max_depth,
-              "learning_rate": learning_rate,
-              "n_estimators": n_estimators,
-              "colsample_bytree": colsample_bytree}
-
-# Grid search
-start = time()
-gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
-scoring=scoring, n_jobs=-1, cv=sss)
-
-gsCV_result = gsCV.fit(X_resampled_df, y_resampled_df)
-elapsed = time() - start
-
-# # results
-print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
-cv_report(gsCV_result.cv_results_)
-
-# Random search
-# n_iter_search = 20
-# random_search = RandomizedSearchCV(
-#     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
-# start = time()
-# random_search.fit(X, y)
-# elapsed = time() - start
-
-# results
-# print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
-    # elapsed / 60, elapsed))
-# cv_report(gsCV_result.cv_results_)
-
-# means, stdevs = [], []
-# for params, mean_score, scores in gsCV_result.grid_scores_:
-#     stdev = scores.std()
-#     means.append(mean_score)
-#     stdevs.append(stdev)
-#     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
-
-```
-Time elapsed: 37.94 minutes (2276.6 sec)
-Model with rank: 1
-Mean validation score: 50.788% ± 2.511%
-Parameters: {'learning_rate': 0.3, 'max_depth': 6, 'n_estimators': 100, 'colsample_bytree': 1}
-
-Model with rank: 2
-Mean validation score: 50.606% ± 2.781%
-Parameters: {'learning_rate': 0.3, 'max_depth': 6, 'n_estimators': 300, 'colsample_bytree': 1}
-
-Model with rank: 3
-Mean validation score: 50.545% ± 2.588%
-Parameters: {'learning_rate': 0.2, 'max_depth': 8, 'n_estimators': 300, 'colsample_bytree': 1}
-
-# Finalising model
-```python
-# features & labels
-X = df_species_age.astype(float)
-y = df_species_age.index
-
-# encode Y class values as integers
-# label_encoder = LabelEncoder()
-# label_encoder = label_encoder.fit(y)
-# label_encoded_y = label_encoder.transform(y)
-
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
-y_resampled_df = X_resampled_df.index
-
-
-
-# cross-val settings
-
-seed = 4
-validation_size = 0.25
-num_splits = 10
-
-# splitting dataset
-X_train, X_test, y_train, y_test = train_test_split(X_resampled_df, y_resampled_df, test_size=validation_size, stratify=None, random_state=seed)
-
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_train, y_train)
-
 # preparing model
-classifier = XGBClassifier(n_estimators=100,
-                           max_depth=6,
-                           learning_rate=0.3,
-                           colsample_bytree=1,
-                           nthread=1)
+model = XGBClassifier(nthread=1, seed=seed)
 
-# Pipeline
-model = classifier
+# Grid search paramater space
+colsample_bytree = [0.1, 0.3, 0.5, 0.8, 1]
+learning_rate = [0.001, 0.01, 0.1]
+max_depth = [6, 8, 10]
+min_child_weight = [1, 3, 5, 7]
+n_estimators = [50, 100, 300, 500]
 
-# LEARN!
+# Mini Grid search paramater space
+# colsample_bytree = [0.1, 1]
+# learning_rate = [0.001, 0.01]
+# max_depth = [6, 8]
+# min_child_weight = [1, 3]
+# n_estimators = [100, 300]
+
+parameters = {"colsample_bytree": colsample_bytree,
+              "learning_rate": learning_rate,
+              "min_child_weight": min_child_weight,
+              "n_estimators": n_estimators,
+              "max_depth": max_depth}
+
+
+# repeated random stratified splitting of dataset
+rskf = RepeatedStratifiedKFold(n_splits=num_splits, n_repeats=num_repeats, random_state=seed)
+
+# prepare matrices of results
+rskf_results = pd.DataFrame() # model parameters and global accuracy score
+rskf_per_class_results = [] # per class accuracy scores
+rskf_orphan_preds = pd.DataFrame() # orphan predictions
 start = time()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
+
+for round in range(num_rounds):
+    seed=np.random.randint(0, 81470108)
+
+    # under-sample over-represented classes
+    rus = NearMiss(random_state=seed, ratio="auto")
+    X_resampled, y_resampled = rus.fit_sample(X, y) #produces numpy arrays
+
+    for train_index, test_index in rskf.split(X_resampled, y_resampled):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        # GRID SEARCH
+        # # grid search on each iteration
+        # start = time()
+        # gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+        #                     scoring=scoring, cv=rskf, n_jobs=-1, verbose=1)
+        # gsCV_result = gsCV.fit(X_train, y_train)
+        # best_model = model(**gsCV_result.best_params_)
+
+        # RANDOMSED GRID SEARCH
+        n_iter_search = 10
+        rsCV = RandomizedSearchCV(verbose=1,
+            estimator=model, param_distributions=parameters, n_iter=n_iter_search, cv=rskf, n_jobs=-1)
+        rsCV_result = rsCV.fit(X_train, y_train)
+
+        best_model = XGBClassifier(nthread=1, seed=seed, **rsCV_result.best_params_)
+
+        #fit model
+        best_model.fit(X_train, y_train)
+
+        #test model
+        y_pred = best_model.predict(np.delete(X_resampled, train_index, axis=0))
+        y_test = np.delete(y_resampled, train_index, axis=0)
+        local_cm = confusion_matrix(y_test, y_pred)
+        local_report = classification_report(y_test, y_pred)
+
+        local_rskf_results = pd.DataFrame([("Accuracy",accuracy_score(y_test, y_pred)), ("params",str(rsCV_result.best_params_)), ("seed", best_model.seed), ("TRAIN",str(train_index)), ("TEST",str(test_index)), ("CM", local_cm), ("Classification report", local_report)]).T
+
+        local_rskf_results.columns=local_rskf_results.iloc[0]
+        local_rskf_results = local_rskf_results[1:]
+        rskf_results = rskf_results.append(local_rskf_results)
+
+        #per class accuracy
+        local_support = precision_recall_fscore_support(y_test, y_pred)[3]
+        local_acc = np.diag(local_cm)/local_support
+        rskf_per_class_results.append(local_acc)
+
+
 elapsed = time() - start
+print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+    elapsed / 60, elapsed))
 
-print("Time elapsed: {0:.2f} seconds".format(elapsed))
-print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
-    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+# Results
+rskf_results.to_csv("./results/xgb_repeatedCV_record.csv", index=False)
+rskf_results = pd.read_csv("./results/xgb_repeatedCV_record.csv")
 
-```
-Time elapsed: 0.54 seconds
-Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=1,
-       gamma=0, learning_rate=0.3, max_delta_step=0, max_depth=6,
-       min_child_weight=1, missing=None, n_estimators=100, nthread=1,
-       objective='multi:softprob', reg_alpha=0, reg_lambda=1,
-       scale_pos_weight=1, seed=0, silent=True, subsample=1)
 
-Accuracy on test set:48.55%
+# Accuracy distribution
+xgb_acc_distrib = rskf_results["Accuracy"]
+xgb_acc_distrib.columns=["Accuracy"]
+xgb_acc_distrib.to_csv("./results/xgb_acc_distrib.csv", header=True, index=False)
+xgb_acc_distrib = pd.read_csv("./results/xgb_acc_distrib.csv")
+xgb_acc_distrib = np.round(100*xgb_acc_distrib)
 
-Classification report:
-             precision    recall  f1-score   support
+plt.figure(figsize=(2.25,3))
+sns.distplot(xgb_acc_distrib, kde=False, bins=12)
+plt.savefig("./plots/xgb_acc_distrib.pdf", bbox_inches="tight")
 
-       AG_1       0.80      0.89      0.84         9
-       AG_3       0.40      0.62      0.48        13
-       AG_5       0.50      0.67      0.57         9
-       AG_7       0.64      0.54      0.58        13
-     AG_old       0.12      0.06      0.08        17
-       AR_1       0.60      0.75      0.67        16
-       AR_3       0.79      0.61      0.69        18
-       AR_5       0.18      0.15      0.17        13
-       AR_7       0.47      0.41      0.44        17
-     AR_old       0.29      0.38      0.33        13
+class_names = y.sort_values().unique()
+xgb_per_class_acc_distrib = pd.DataFrame(rskf_per_class_results, columns=class_names)
+xgb_per_class_acc_distrib.dropna().to_csv("./results/xgb_per_class_acc_distrib.csv")
+xgb_per_class_acc_distrib = pd.read_csv("./results/xgb_per_class_acc_distrib.csv", index_col=0)
+xgb_per_class_acc_distrib = np.round(100*xgb_per_class_acc_distrib)
+xgb_per_class_acc_distrib_describe = xgb_per_class_acc_distrib.describe()
+xgb_per_class_acc_distrib_describe.to_csv("./results/xgb_per_class_acc_distrib.csv")
 
-avg / total       0.47      0.49      0.47       138
+xgb_per_class_acc_distrib = pd.melt(xgb_per_class_acc_distrib, var_name="Species_Age")
+xgb_per_class_acc_distrib
+plt.figure(figsize=(4.75, 3))
+plt.rc('font', family='Helvetica')
+sns.violinplot(x="Species_Age", y="value", cut=0, data=xgb_per_class_acc_distrib)
+sns.despine(left=True)
+plt.xticks(rotation=45, ha="right")
+plt.ylabel("Prediction accuracy")
+plt.savefig("./plots/xgb_per_class_acc_distrib.pdf", bbox_inches="tight")
 
-# Confusion matrix
 
-```python
-class_names = y_test.sort_values().unique()
-# class_names = ["AG_1", "AG_3", "AG_5", "AG_7", "AG_old", "AR_1", "AR_3", "AR_5", "AR_7", "AR_old"]
-cm = confusion_matrix(y_test, y_pred)
-np.set_printoptions(precision=2)
-
-# print(y_test.unique())
-# print(cm)
-plt.figure()
-plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
-plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len( class_names) - 1.5, (len(class_names) + 1.7)], color="darkblue", style="italic", size="small")
-
-plt.savefig("./plots/xgb_CM_species_age_rus.png", bbox_inches="tight")
 
 ```
 
-# Feature Importances
 
-```python
-fig = xgb.plot_importance(model,
-                    # importance_type="gain",
-                    height=0.4,
-                    title="Importance of predictor of age and species",
-                    # xlabel="Average gain when feature is used",
-                    ylabel="")
-
-plt.savefig("./plots/xgb_feat_imp_species_age_rus.png", bbox_inches="tight")
-```
-
-# Field test
-```python
-X_test = df_fieldtest_species_age
-y_test = df_fieldtest_species_age.index
-
-y_pred = model.predict(X_test)
-elapsed = time() - start
-
-print("Time elapsed: {0:.2f} seconds".format(elapsed))
-print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
-    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
-```
-Time elapsed: 139.61 seconds
-Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=1,
-       gamma=0, learning_rate=0.3, max_delta_step=0, max_depth=6,
-       min_child_weight=1, missing=None, n_estimators=100, nthread=1,
-       objective='multi:softprob', reg_alpha=0, reg_lambda=1,
-       scale_pos_weight=1, seed=0, silent=True, subsample=1)
-
-
-Classification report:
-             precision    recall  f1-score   support
-
-       AG_1       0.33      0.17      0.22         6
-       AG_3       0.50      0.20      0.29        10
-       AG_5       0.33      0.11      0.17         9
-       AG_7       0.00      0.00      0.00        10
-     AG_old       0.00      0.00      0.00         0
-       AR_1       0.00      0.00      0.00         0
-       AR_3       0.00      0.00      0.00         0
-       AR_5       0.00      0.00      0.00         0
-       AR_7       0.00      0.00      0.00         0
-     AR_old       0.00      0.00      0.00         0
-
-avg / total       0.29      0.11      0.16        35
-/Users/s_a_b/anaconda3/lib/python3.5/site-packages/sklearn/metrics/classification.py:1115: UndefinedMetricWarning: Recall and F-score are ill-defined and being set to 0.0 in labels with no true samples.
-  'recall', 'true', average, warn_for)
 
 #########################################
 # PREDICTING SPECIES
@@ -619,409 +519,479 @@ plt.savefig("./plots/spot_check_species_rus.png", bbox_inches="tight")
 
 ```
 
-# Optimising Gradient boosting with RandomForestClassifier
+# BIG LOOP
 
 ```python
 
 # Parameter search
 
 # features & labels
-X = df_species.astype(float)
+X = df_species.values
 y = df_species.index
 
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
-y_resampled_df = X_resampled_df.index
-
-# cross-val settings
+# cross validation
 seed = 4
 validation_size = 0.3
-num_splits = 10
+num_splits = 5
+num_repeats = 5
+num_rounds = 5
 scoring = "accuracy"
-
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_resampled_df, y_resampled_df)
-
-# base algorithm settings
-classifier = RandomForestClassifier(n_jobs=-1)
-
-# the real deal:
-n_estimators = [100, 300, 500, 800]
-min_samples_split = [3, 5, 7]
-max_features = ['sqrt', 'log2', 0.3]
-
-parameters = {"max_features": max_features,
-              "min_samples_split": min_samples_split,
-              "n_estimators": n_estimators}
-
-# Grid search
-start = time()
-gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
-scoring=scoring, n_jobs=-1, cv=sss)
-
-gsCV_result = gsCV.fit(X_resampled_df, y_resampled_df)
-elapsed = time() - start
-
-# # results
-print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
-cv_report(gsCV_result.cv_results_)
-
-# Random search
-# n_iter_search = 20
-# random_search = RandomizedSearchCV(
-#     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
-# start = time()
-# random_search.fit(X, y)
-# elapsed = time() - start
-
-# results
-# print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
-    # elapsed / 60, elapsed))
-# cv_report(gsCV_result.cv_results_)
-
-# means, stdevs = [], []
-# for params, mean_score, scores in gsCV_result.grid_scores_:
-#     stdev = scores.std()
-#     means.append(mean_score)
-#     stdevs.append(stdev)
-#     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
-
-```
-
-Time elapsed: 2.79 minutes (167.6 sec)
-Model with rank: 1
-Mean validation score: 83.238% ± 1.649%
-Parameters: {'min_samples_split': 3, 'n_estimators': 800, 'max_features': 0.3}
-
-Model with rank: 2
-Mean validation score: 83.222% ± 1.508%
-Parameters: {'min_samples_split': 3, 'n_estimators': 100, 'max_features': 'sqrt'}
-
-Model with rank: 3
-Mean validation score: 83.206% ± 1.439%
-Parameters: {'min_samples_split': 5, 'n_estimators': 800, 'max_features': 0.3}
-
-# Finalising model
-```python
-# features & labels
-X = df_species.astype(float)
-y = df_species.index
-
-# encode Y class values as integers
-# label_encoder = LabelEncoder()
-# label_encoder = label_encoder.fit(y)
-# label_encoded_y = label_encoder.transform(y)
-
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
-y_resampled_df = X_resampled_df.index
-
-# cross-val settings
-seed = 4
-validation_size = 0.25
-num_splits = 10
-
-# splitting dataset
-X_train, X_test, y_train, y_test = train_test_split(X_resampled_df, y_resampled_df, test_size=validation_size, stratify=None, random_state=seed)
-
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_train, y_train)
 
 # preparing model
-classifier = RandomForestClassifier(n_estimators=100,
-                                    max_features=0.3,
-                                    min_samples_split=3,
-                                    n_jobs=1)
+model = XGBClassifier(nthread=1, seed=seed)
 
-# Pipeline
-model = classifier
+# Grid search paramater space
+colsample_bytree = [0.1, 0.3, 0.5, 0.8, 1]
+learning_rate = [0.001, 0.01, 0.1]
+max_depth = [6, 8, 10]
+min_child_weight = [1, 3, 5, 7]
+n_estimators = [50, 100, 300, 500]
 
-# LEARN!
-start = time()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-elapsed = time() - start
-
-print("Time elapsed: {0:.2f} seconds".format(elapsed))
-print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
-    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
-
-```
-Time elapsed: 0.41 seconds
-Model: RandomForestClassifier(bootstrap=True, class_weight=None, criterion='gini',
-            max_depth=None, max_features=0.3, max_leaf_nodes=None,
-            min_impurity_split=1e-07, min_samples_leaf=1,
-            min_samples_split=3, min_weight_fraction_leaf=0.0,
-            n_estimators=100, n_jobs=1, oob_score=False, random_state=None,
-            verbose=0, warm_start=False)
-
-Accuracy on test set:84.67%
-
-Classification report:
-             precision    recall  f1-score   support
-
-         AG       0.82      0.88      0.85       255
-         AR       0.88      0.82      0.84       267
-
-avg / total       0.85      0.85      0.85       522
-
-# Confusion matrix
-
-```python
-class_names = y_test.sort_values().unique()
-# class_names = ["AG", "AR"]
-cm = confusion_matrix(y_test, y_pred)
-np.set_printoptions(precision=2)
-
-# print(y_test.unique())
-# print(cm)
-plt.figure()
-plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
-plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len( class_names) - 1, (len(class_names) - 0.2)], color="darkblue", style="italic", size="small")
-
-plt.savefig("./plots/RF_CM_species_rus.png", bbox_inches="tight")
-
-```
-
-
-# Optimising Gradient boosting with XGB
-
-```python
-
-# Parameter search
-
-# features & labels
-X = df_species.astype(float)
-y = df_species.index
-
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-# cross-val settings
-seed = 4
-validation_size = 0.3
-num_splits = 10
-scoring = "accuracy"
-
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_resampled, y_resampled)
-
-# base algorithm settings
-classifier = XGBClassifier(nthread=1)
-
-# define hyperparameter space to test
-# for troubleshooting:
-# max_depth = [2, 4]
-# n_estimators = [100, 400, 500]
-# learning_rate = [0.01, 0.1]
+# Mini Grid search paramater space
 # colsample_bytree = [0.1, 1]
+# learning_rate = [0.001, 0.01]
+# max_depth = [6, 8]
+# min_child_weight = [1, 3]
+# n_estimators = [100, 300]
 
-# the real deal:
-max_depth = [2, 4, 6, 8]  # 4?
-n_estimators = [100, 300, 500, 800]  # 400?
-learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
-colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
-
-
-parameters = {"max_depth": max_depth,
+parameters = {"colsample_bytree": colsample_bytree,
               "learning_rate": learning_rate,
+              "min_child_weight": min_child_weight,
               "n_estimators": n_estimators,
-              "colsample_bytree": colsample_bytree}
+              "max_depth": max_depth}
 
-# Grid search
+
+# repeated random stratified splitting of dataset
+rskf = RepeatedStratifiedKFold(n_splits=num_splits, n_repeats=num_repeats, random_state=seed)
+
+# prepare matrices of results
+rskf_results = pd.DataFrame() # model parameters and global accuracy score
+rskf_per_class_results = [] # per class accuracy scores
+rskf_orphan_preds = pd.DataFrame() # orphan predictions
 start = time()
-gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
-scoring=scoring, n_jobs=-1, cv=sss)
 
-gsCV_result = gsCV.fit(X_resampled, y_resampled)
+for round in range(num_rounds):
+    seed=np.random.randint(0, 81470108)
+
+    # under-sample over-represented classes
+    rus = NearMiss(random_state=seed, ratio="auto")
+    X_resampled, y_resampled = rus.fit_sample(X, y) #produces numpy arrays
+
+    for train_index, test_index in rskf.split(X_resampled, y_resampled):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        # GRID SEARCH
+        # # grid search on each iteration
+        # start = time()
+        # gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+        #                     scoring=scoring, cv=rskf, n_jobs=-1, verbose=1)
+        # gsCV_result = gsCV.fit(X_train, y_train)
+        # best_model = model(**gsCV_result.best_params_)
+
+        # RANDOMSED GRID SEARCH
+        n_iter_search = 10
+        rsCV = RandomizedSearchCV(verbose=1,
+            estimator=model, param_distributions=parameters, n_iter=n_iter_search, cv=rskf, n_jobs=-1)
+        rsCV_result = rsCV.fit(X_train, y_train)
+
+        best_model = XGBClassifier(nthread=1, seed=seed, **rsCV_result.best_params_)
+
+        #fit model
+        best_model.fit(X_train, y_train)
+
+        #test model
+        y_pred = best_model.predict(np.delete(X_resampled, train_index, axis=0))
+        y_test = np.delete(y_resampled, train_index, axis=0)
+        local_cm = confusion_matrix(y_test, y_pred)
+        local_report = classification_report(y_test, y_pred)
+
+        local_rskf_results = pd.DataFrame([("Accuracy",accuracy_score(y_test, y_pred)), ("params",str(rsCV_result.best_params_)), ("seed", best_model.seed), ("TRAIN",str(train_index)), ("TEST",str(test_index)), ("CM", local_cm), ("Classification report", local_report)]).T
+
+        local_rskf_results.columns=local_rskf_results.iloc[0]
+        local_rskf_results = local_rskf_results[1:]
+        rskf_results = rskf_results.append(local_rskf_results)
+
+        #per class accuracy
+        local_support = precision_recall_fscore_support(y_test, y_pred)[3]
+        local_acc = np.diag(local_cm)/local_support
+        rskf_per_class_results.append(local_acc)
+
+
 elapsed = time() - start
+print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+    elapsed / 60, elapsed))
 
-# # results
-print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
-cv_report(gsCV_result.cv_results_)
+# Results
+rskf_results.to_csv("./results/xgb_sp_repeatedCV_record.csv", index=False)
+rskf_results = pd.read_csv("./results/xgb_sp_repeatedCV_record.csv")
 
-# Random search
-# n_iter_search = 20
-# random_search = RandomizedSearchCV(
-#     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
-# start = time()
-# random_search.fit(X, y)
-# elapsed = time() - start
 
-# results
-# print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
-    # elapsed / 60, elapsed))
-# cv_report(gsCV_result.cv_results_)
+# Accuracy distribution
+xgb_sp_acc_distrib = rskf_results["Accuracy"]
+xgb_sp_acc_distrib.columns=["Accuracy"]
+xgb_sp_acc_distrib.to_csv("./results/xgb_sp_acc_distrib.csv", header=True, index=False)
+xgb_sp_acc_distrib = pd.read_csv("./results/xgb_sp_acc_distrib.csv")
+xgb_sp_acc_distrib = np.round(100*xgb_sp_acc_distrib)
 
-# means, stdevs = [], []
-# for params, mean_score, scores in gsCV_result.grid_scores_:
-#     stdev = scores.std()
-#     means.append(mean_score)
-#     stdevs.append(stdev)
-#     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
+plt.figure(figsize=(2.25,3))
+sns.distplot(xgb_sp_acc_distrib, kde=False, bins=12)
+plt.savefig("./plots/xgb_sp_acc_distrib.pdf", bbox_inches="tight")
 
-```
-Time elapsed: 51.20 minutes (3072.1 sec)
-Model with rank: 1
-Mean validation score: 84.817% ± 1.405%
-Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.7, 'max_depth': 8}
+class_names = y.sort_values().unique()
+xgb_sp_per_class_acc_distrib = pd.DataFrame(rskf_per_class_results, columns=class_names)
+xgb_sp_per_class_acc_distrib.dropna().to_csv("./results/xgb_sp_per_class_acc_distrib.csv")
+xgb_sp_per_class_acc_distrib = pd.read_csv("./results/xgb_sp_per_class_acc_distrib.csv", index_col=0)
+xgb_sp_per_class_acc_distrib = np.round(100*xgb_sp_per_class_acc_distrib)
+xgb_sp_per_class_acc_distrib_describe = xgb_sp_per_class_acc_distrib.describe()
+xgb_sp_per_class_acc_distrib_describe.to_csv("./results/xgb_sp_per_class_acc_distrib.csv")
 
-Model with rank: 2
-Mean validation score: 84.753% ± 1.335%
-Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.7, 'max_depth': 6}
+xgb_sp_per_class_acc_distrib = pd.melt(xgb_sp_per_class_acc_distrib, var_name="Reservoir")
+xgb_sp_per_class_acc_distrib
+plt.figure(figsize=(4.75, 3))
+plt.rc('font', family='Helvetica')
+sns.violinplot(x="Reservoir", y="value", cut=0, data=xgb_sp_per_class_acc_distrib)
+sns.despine(left=True)
+plt.xticks(rotation=45, ha="right")
+plt.ylabel("Prediction accuracy")
+plt.savefig("./plots/xgb_sp_per_class_acc_distrib.pdf", bbox_inches="tight")
 
-Model with rank: 3
-Mean validation score: 84.689% ± 1.155%
-Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.4, 'max_depth': 4}
 
-# Finalising model
-```python
-# features & labels
-X = df_species
-y = df_species.index
-
-# encode Y class values as integers
-# label_encoder = LabelEncoder()
-# label_encoder = label_encoder.fit(y)
-# label_encoded_y = label_encoder.transform(y)
-
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
-y_resampled_df = X_resampled_df.index
-
-# cross-val settings
-seed = 4
-validation_size = 0.25
-num_splits = 10
-
-# splitting dataset
-X_train, X_test, y_train, y_test = train_test_split(X_resampled_df, y_resampled_df, test_size=validation_size, stratify=None, random_state=seed)
-
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_train, y_train)
-
-# preparing model
-classifier = XGBClassifier(n_estimators=800,
-                           max_depth=8,
-                           learning_rate=0.2,
-                           colsample_bytree=0.7,
-                           nthread=1)
-
-# Pipeline
-model = classifier
-
-# LEARN!
-start = time()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-elapsed = time() - start
-
-print("Time elapsed: {0:.2f} seconds".format(elapsed))
-print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
-    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
-
-```
-Time elapsed: 1.11 seconds
-Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.7,
-       gamma=0, learning_rate=0.2, max_delta_step=0, max_depth=8,
-       min_child_weight=1, missing=None, n_estimators=800, nthread=1,
-       objective='binary:logistic', reg_alpha=0, reg_lambda=1,
-       scale_pos_weight=1, seed=0, silent=True, subsample=1)
-
-Accuracy on test set:85.25%
-
-Classification report:
-             precision    recall  f1-score   support
-
-         AG       0.84      0.86      0.85       255
-         AR       0.87      0.84      0.85       267
-
-avg / total       0.85      0.85      0.85       522
-
-# Confusion matrix
-
-```python
-class_names = y_test.sort_values().unique()
-# class_names = ["AG", "AR"]
-cm = confusion_matrix(y_test, y_pred)
-np.set_printoptions(precision=2)
-
-# print(y_test.unique())
-# print(cm)
-plt.figure()
-plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
-plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len( class_names) - 1, (len(class_names) - 0.2)], color="darkblue", style="italic", size="small")
-
-plt.savefig("./plots/xgb_CM_species_rus.png", bbox_inches="tight")
 
 ```
 
-# Feature Importances
-
-```python
-fig = xgb.plot_importance(model,
-                    # importance_type="gain",
-                    height=0.4,
-                    title="Importance of predictor of species",
-                    # xlabel="Average gain when feature is used",
-                    ylabel="")
-
-plt.savefig("./plots/xgb_feat_imp_species_rus.png", bbox_inches="tight")
-```
-
-List of top features:
-
-```python
-print(df_species.columns[[17, 0, 5, 15]])
-```
-Index(['525.57926', '3855.53371', '1900.76462', '1028.97811'], dtype='object')
-
-# Field test
-```python
-X_test = df_fieldtest_species
-y_test = df_fieldtest_species.index
-
-start = time()
-y_pred = model.predict(X_test)
-elapsed = time() - start
-
-print("Time elapsed: {0:.2f} seconds".format(elapsed))
-print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
-    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
-```
-Time elapsed: 0.00 seconds
-Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.7,
-       gamma=0, learning_rate=0.2, max_delta_step=0, max_depth=8,
-       min_child_weight=1, missing=None, n_estimators=800, nthread=1,
-       objective='binary:logistic', reg_alpha=0, reg_lambda=1,
-       scale_pos_weight=1, seed=0, silent=True, subsample=1)
 
 
-Classification report:
-             precision    recall  f1-score   support
-
-         AG       1.00      0.49      0.65        35
-         AR       0.00      0.00      0.00         0
-
-avg / total       1.00      0.49      0.65        35
+##
+## Time elapsed: 2.79 minutes (167.6 sec)
+## Model with rank: 1
+## Mean validation score: 83.238% ± 1.649%
+## Parameters: {'min_samples_split': 3, 'n_estimators': 800, 'max_features': 0.3}
+##
+## Model with rank: 2
+## Mean validation score: 83.222% ± 1.508%
+## Parameters: {'min_samples_split': 3, 'n_estimators': 100, 'max_features': 'sqrt'}
+##
+## Model with rank: 3
+## Mean validation score: 83.206% ± 1.439%
+## Parameters: {'min_samples_split': 5, 'n_estimators': 800, 'max_features': 0.3}
+##
+## # Finalising model
+## ```python
+## # features & labels
+## X = df_species.astype(float)
+## y = df_species.index
+##
+## # encode Y class values as integers
+## # label_encoder = LabelEncoder()
+## # label_encoder = label_encoder.fit(y)
+## # label_encoded_y = label_encoder.transform(y)
+##
+## # under-sample over-represented classes
+## rus = RandomUnderSampler(random_state=34)
+## X_resampled, y_resampled = rus.fit_sample(X, y)
+##
+## X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+## y_resampled_df = X_resampled_df.index
+##
+## # cross-val settings
+## seed = 4
+## validation_size = 0.25
+## num_splits = 10
+##
+## # splitting dataset
+## X_train, X_test, y_train, y_test = train_test_split(X_resampled_df, y_resampled_df, test_size=validation_size, stratify=None, random_state=seed)
+##
+## # cross validation algorithm
+## sss = StratifiedShuffleSplit(
+##     n_splits=num_splits, test_size=validation_size, random_state=seed)
+## sss.split(X_train, y_train)
+##
+## # preparing model
+## classifier = RandomForestClassifier(n_estimators=100,
+##                                     max_features=0.3,
+##                                     min_samples_split=3,
+##                                     n_jobs=1)
+##
+## # Pipeline
+## model = classifier
+##
+## # LEARN!
+## start = time()
+## model.fit(X_train, y_train)
+## y_pred = model.predict(X_test)
+## elapsed = time() - start
+##
+## print("Time elapsed: {0:.2f} seconds".format(elapsed))
+## print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+##     model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+##
+## ```
+## Time elapsed: 0.41 seconds
+## Model: RandomForestClassifier(bootstrap=True, class_weight=None, criterion='gini',
+##             max_depth=None, max_features=0.3, max_leaf_nodes=None,
+##             min_impurity_split=1e-07, min_samples_leaf=1,
+##             min_samples_split=3, min_weight_fraction_leaf=0.0,
+##             n_estimators=100, n_jobs=1, oob_score=False, random_state=None,
+##             verbose=0, warm_start=False)
+##
+## Accuracy on test set:84.67%
+##
+## Classification report:
+##              precision    recall  f1-score   support
+##
+##          AG       0.82      0.88      0.85       255
+##          AR       0.88      0.82      0.84       267
+##
+## avg / total       0.85      0.85      0.85       522
+##
+## # Confusion matrix
+##
+## ```python
+## class_names = y_test.sort_values().unique()
+## # class_names = ["AG", "AR"]
+## cm = confusion_matrix(y_test, y_pred)
+## np.set_printoptions(precision=2)
+##
+## # print(y_test.unique())
+## # print(cm)
+## plt.figure()
+## plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
+## plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len( class_names) - 1, (len(class_names) - 0.2)], color="darkblue", style="italic", size="small")
+##
+## plt.savefig("./plots/RF_CM_species_rus.png", bbox_inches="tight")
+##
+## ```
+##
+##
+## # Optimising Gradient boosting with XGB
+##
+## ```python
+##
+## # Parameter search
+##
+## # features & labels
+## X = df_species.astype(float)
+## y = df_species.index
+##
+## # under-sample over-represented classes
+## rus = RandomUnderSampler(random_state=34)
+## X_resampled, y_resampled = rus.fit_sample(X, y)
+##
+## # cross-val settings
+## seed = 4
+## validation_size = 0.3
+## num_splits = 10
+## scoring = "accuracy"
+##
+## # cross validation algorithm
+## sss = StratifiedShuffleSplit(
+##     n_splits=num_splits, test_size=validation_size, random_state=seed)
+## sss.split(X_resampled, y_resampled)
+##
+## # base algorithm settings
+## classifier = XGBClassifier(nthread=1)
+##
+## # define hyperparameter space to test
+## # for troubleshooting:
+## # max_depth = [2, 4]
+## # n_estimators = [100, 400, 500]
+## # learning_rate = [0.01, 0.1]
+## # colsample_bytree = [0.1, 1]
+##
+## # the real deal:
+## max_depth = [2, 4, 6, 8]  # 4?
+## n_estimators = [100, 300, 500, 800]  # 400?
+## learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
+## colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
+##
+##
+## parameters = {"max_depth": max_depth,
+##               "learning_rate": learning_rate,
+##               "n_estimators": n_estimators,
+##               "colsample_bytree": colsample_bytree}
+##
+## # Grid search
+## start = time()
+## gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+## scoring=scoring, n_jobs=-1, cv=sss)
+##
+## gsCV_result = gsCV.fit(X_resampled, y_resampled)
+## elapsed = time() - start
+##
+## # # results
+## print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
+## cv_report(gsCV_result.cv_results_)
+##
+## # Random search
+## # n_iter_search = 20
+## # random_search = RandomizedSearchCV(
+## #     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
+## # start = time()
+## # random_search.fit(X, y)
+## # elapsed = time() - start
+##
+## # results
+## # print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+##     # elapsed / 60, elapsed))
+## # cv_report(gsCV_result.cv_results_)
+##
+## # means, stdevs = [], []
+## # for params, mean_score, scores in gsCV_result.grid_scores_:
+## #     stdev = scores.std()
+## #     means.append(mean_score)
+## #     stdevs.append(stdev)
+## #     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
+##
+## ```
+## Time elapsed: 51.20 minutes (3072.1 sec)
+## Model with rank: 1
+## Mean validation score: 84.817% ± 1.405%
+## Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.7, 'max_depth': 8}
+##
+## Model with rank: 2
+## Mean validation score: 84.753% ± 1.335%
+## Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.7, 'max_depth': 6}
+##
+## Model with rank: 3
+## Mean validation score: 84.689% ± 1.155%
+## Parameters: {'learning_rate': 0.2, 'n_estimators': 800, 'colsample_bytree': 0.4, 'max_depth': 4}
+##
+## # Finalising model
+## ```python
+## # features & labels
+## X = df_species
+## y = df_species.index
+##
+## # encode Y class values as integers
+## # label_encoder = LabelEncoder()
+## # label_encoder = label_encoder.fit(y)
+## # label_encoded_y = label_encoder.transform(y)
+##
+## # under-sample over-represented classes
+## rus = RandomUnderSampler(random_state=34)
+## X_resampled, y_resampled = rus.fit_sample(X, y)
+##
+## X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+## y_resampled_df = X_resampled_df.index
+##
+## # cross-val settings
+## seed = 4
+## validation_size = 0.25
+## num_splits = 10
+##
+## # splitting dataset
+## X_train, X_test, y_train, y_test = train_test_split(X_resampled_df, y_resampled_df, test_size=validation_size, stratify=None, random_state=seed)
+##
+## # cross validation algorithm
+## sss = StratifiedShuffleSplit(
+##     n_splits=num_splits, test_size=validation_size, random_state=seed)
+## sss.split(X_train, y_train)
+##
+## # preparing model
+## classifier = XGBClassifier(n_estimators=800,
+##                            max_depth=8,
+##                            learning_rate=0.2,
+##                            colsample_bytree=0.7,
+##                            nthread=1)
+##
+## # Pipeline
+## model = classifier
+##
+## # LEARN!
+## start = time()
+## model.fit(X_train, y_train)
+## y_pred = model.predict(X_test)
+## elapsed = time() - start
+##
+## print("Time elapsed: {0:.2f} seconds".format(elapsed))
+## print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+##     model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+##
+## ```
+## Time elapsed: 1.11 seconds
+## Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.7,
+##        gamma=0, learning_rate=0.2, max_delta_step=0, max_depth=8,
+##        min_child_weight=1, missing=None, n_estimators=800, nthread=1,
+##        objective='binary:logistic', reg_alpha=0, reg_lambda=1,
+##        scale_pos_weight=1, seed=0, silent=True, subsample=1)
+##
+## Accuracy on test set:85.25%
+##
+## Classification report:
+##              precision    recall  f1-score   support
+##
+##          AG       0.84      0.86      0.85       255
+##          AR       0.87      0.84      0.85       267
+##
+## avg / total       0.85      0.85      0.85       522
+##
+## # Confusion matrix
+##
+## ```python
+## class_names = y_test.sort_values().unique()
+## # class_names = ["AG", "AR"]
+## cm = confusion_matrix(y_test, y_pred)
+## np.set_printoptions(precision=2)
+##
+## # print(y_test.unique())
+## # print(cm)
+## plt.figure()
+## plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
+## plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len( class_names) - 1, (len(class_names) - 0.2)], color="darkblue", style="italic", size="small")
+##
+## plt.savefig("./plots/xgb_CM_species_rus.png", bbox_inches="tight")
+##
+## ```
+##
+## # Feature Importances
+##
+## ```python
+## fig = xgb.plot_importance(model,
+##                     # importance_type="gain",
+##                     height=0.4,
+##                     title="Importance of predictor of species",
+##                     # xlabel="Average gain when feature is used",
+##                     ylabel="")
+##
+## plt.savefig("./plots/xgb_feat_imp_species_rus.png", bbox_inches="tight")
+## ```
+##
+## List of top features:
+##
+## ```python
+## print(df_species.columns[[17, 0, 5, 15]])
+## ```
+## Index(['525.57926', '3855.53371', '1900.76462', '1028.97811'], dtype='object')
+##
+## # Field test
+## ```python
+## X_test = df_fieldtest_species
+## y_test = df_fieldtest_species.index
+##
+## start = time()
+## y_pred = model.predict(X_test)
+## elapsed = time() - start
+##
+## print("Time elapsed: {0:.2f} seconds".format(elapsed))
+## print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+##     model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+## ```
+## Time elapsed: 0.00 seconds
+## Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.7,
+##        gamma=0, learning_rate=0.2, max_delta_step=0, max_depth=8,
+##        min_child_weight=1, missing=None, n_estimators=800, nthread=1,
+##        objective='binary:logistic', reg_alpha=0, reg_lambda=1,
+##        scale_pos_weight=1, seed=0, silent=True, subsample=1)
+##
+##
+## Classification report:
+##              precision    recall  f1-score   support
+##
+##          AG       1.00      0.49      0.65        35
+##          AR       0.00      0.00      0.00         0
+##
+## avg / total       1.00      0.49      0.65        35
 
 
 #########################################
@@ -1090,239 +1060,383 @@ plt.ylabel("Accuracy (median, quartiles, range)")
 plt.savefig("./plots/spot_check_age_rus_AGandAR.png", bbox_inches="tight")
 
 ```
-# Optimising Gradient boosting with XGBoost
+
+# BIG LOOP
 
 ```python
 
 # Parameter search
 
 # features & labels
-X = df_age.astype(float)
+X = df_age.values
 y = df_age.index
 
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
-y_resampled_df = X_resampled_df.index
-
-# cross-val settings
+# cross validation
 seed = 4
 validation_size = 0.3
-num_splits = 10
+num_splits = 5
+num_repeats = 5
+num_rounds = 5
 scoring = "accuracy"
 
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_resampled_df, y_resampled_df)
-
-# base algorithm settings
-classifier = XGBClassifier(nthread=1)
-
-# define hyperparameter space to test
-# for troubleshooting:
-# max_depth = [2, 4]
-# n_estimators = [100, 400, 500]
-# learning_rate = [0.01, 0.1]
-# colsample_bytree = [0.1, 1]
-
-# the real deal:
-max_depth = [2, 4, 6, 8]  # 4?
-n_estimators = [100, 300, 500, 800]  # 400?
-learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
-colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
-
-
-parameters = {"max_depth": max_depth,
-              "learning_rate": learning_rate,
-              "n_estimators": n_estimators,
-              "colsample_bytree": colsample_bytree}
-
-# Grid search
-start = time()
-gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
-scoring=scoring, n_jobs=-1, cv=sss)
-
-gsCV_result = gsCV.fit(X_resampled_df, y_resampled_df)
-elapsed = time() - start
-
-# # results
-print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
-cv_report(gsCV_result.cv_results_)
-
-# Random search
-# n_iter_search = 20
-# random_search = RandomizedSearchCV(
-#     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
-# start = time()
-# random_search.fit(X, y)
-# elapsed = time() - start
-
-# results
-# print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
-    # elapsed / 60, elapsed))
-# cv_report(gsCV_result.cv_results_)
-
-
-# means, stdevs = [], []
-# for params, mean_score, scores in gsCV_result.grid_scores_:
-#     stdev = scores.std()
-#     means.append(mean_score)
-#     stdevs.append(stdev)
-#     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
-
-```
-
-Time elapsed: 27.98 minutes (1678.9 sec)
-Model with rank: 1
-Mean validation score: 59.414% ± 1.323%
-Parameters: {'learning_rate': 0.1, 'n_estimators': 100, 'max_depth': 6, 'colsample_bytree': 0.6}
-
-Model with rank: 2
-Mean validation score: 59.289% ± 1.927%
-Parameters: {'learning_rate': 0.1, 'n_estimators': 100, 'max_depth': 8, 'colsample_bytree': 0.8}
-
-Model with rank: 3
-Mean validation score: 59.205% ± 0.977%
-Parameters: {'learning_rate': 0.1, 'n_estimators': 100, 'max_depth': 4, 'colsample_bytree': 0.6}
-
-Model with rank: 3
-Mean validation score: 59.205% ± 1.157%
-Parameters: {'learning_rate': 0.1, 'n_estimators': 100, 'max_depth': 4, 'colsample_bytree': 0.7}
-
-# Finalising model
-```python
-# features & labels
-X = df_age.astype(float)
-y = df_age.index
-
-# encode Y class values as integers
-# label_encoder = LabelEncoder()
-# label_encoder = label_encoder.fit(y)
-# label_encoded_y = label_encoder.transform(y)
-
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
-y_resampled_df = X_resampled_df.index
-
-# cross-val settings
-seed = 4
-validation_size = 0.25
-num_splits = 10
-
-# splitting dataset
-X_train, X_test, y_train, y_test = train_test_split(X_resampled_df, y_resampled_df, test_size=validation_size, stratify=None, random_state=seed)
-
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_train, y_train)
-
 # preparing model
-classifier = XGBClassifier(n_estimators=100,
-                           max_depth=6,
-                           learning_rate=0.1,
-                           colsample_bytree=0.6,
-                           nthread=1)
+model = XGBClassifier(nthread=1, seed=seed)
 
-# Pipeline
-model = classifier
+# Grid search paramater space
+colsample_bytree = [0.1, 0.3, 0.5, 0.8, 1]
+learning_rate = [0.001, 0.01, 0.1]
+max_depth = [6, 8, 10]
+min_child_weight = [1, 3, 5, 7]
+n_estimators = [50, 100, 300, 500]
 
-# LEARN!
+# Mini Grid search paramater space
+# colsample_bytree = [0.1, 1]
+# learning_rate = [0.001, 0.01]
+# max_depth = [6, 8]
+# min_child_weight = [1, 3]
+# n_estimators = [100, 300]
+
+parameters = {"colsample_bytree": colsample_bytree,
+              "learning_rate": learning_rate,
+              "min_child_weight": min_child_weight,
+              "n_estimators": n_estimators,
+              "max_depth": max_depth}
+
+
+# repeated random stratified splitting of dataset
+rskf = RepeatedStratifiedKFold(n_splits=num_splits, n_repeats=num_repeats, random_state=seed)
+
+# prepare matrices of results
+rskf_results = pd.DataFrame() # model parameters and global accuracy score
+rskf_per_class_results = [] # per class accuracy scores
+rskf_orphan_preds = pd.DataFrame() # orphan predictions
 start = time()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
+
+for round in range(num_rounds):
+    seed=np.random.randint(0, 81470108)
+
+    # under-sample over-represented classes
+    rus = NearMiss(random_state=seed, ratio="auto")
+    X_resampled, y_resampled = rus.fit_sample(X, y) #produces numpy arrays
+
+    for train_index, test_index in rskf.split(X_resampled, y_resampled):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        # GRID SEARCH
+        # # grid search on each iteration
+        # start = time()
+        # gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+        #                     scoring=scoring, cv=rskf, n_jobs=-1, verbose=1)
+        # gsCV_result = gsCV.fit(X_train, y_train)
+        # best_model = model(**gsCV_result.best_params_)
+
+        # RANDOMSED GRID SEARCH
+        n_iter_search = 10
+        rsCV = RandomizedSearchCV(verbose=1,
+            estimator=model, param_distributions=parameters, n_iter=n_iter_search, cv=rskf, n_jobs=-1)
+        rsCV_result = rsCV.fit(X_train, y_train)
+
+        best_model = XGBClassifier(nthread=1, seed=seed, **rsCV_result.best_params_)
+
+        #fit model
+        best_model.fit(X_train, y_train)
+
+        #test model
+        y_pred = best_model.predict(np.delete(X_resampled, train_index, axis=0))
+        y_test = np.delete(y_resampled, train_index, axis=0)
+        local_cm = confusion_matrix(y_test, y_pred)
+        local_report = classification_report(y_test, y_pred)
+
+        local_rskf_results = pd.DataFrame([("Accuracy",accuracy_score(y_test, y_pred)), ("params",str(rsCV_result.best_params_)), ("seed", best_model.seed), ("TRAIN",str(train_index)), ("TEST",str(test_index)), ("CM", local_cm), ("Classification report", local_report)]).T
+
+        local_rskf_results.columns=local_rskf_results.iloc[0]
+        local_rskf_results = local_rskf_results[1:]
+        rskf_results = rskf_results.append(local_rskf_results)
+
+        #per class accuracy
+        local_support = precision_recall_fscore_support(y_test, y_pred)[3]
+        local_acc = np.diag(local_cm)/local_support
+        rskf_per_class_results.append(local_acc)
+
+
 elapsed = time() - start
+print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+    elapsed / 60, elapsed))
 
-print("Time elapsed: {0:.2f} seconds".format(elapsed))
-print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
-    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
-
-```
-Time elapsed: 0.37 seconds
-Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.6,
-       gamma=0, learning_rate=0.1, max_delta_step=0, max_depth=6,
-       min_child_weight=1, missing=None, n_estimators=100, nthread=1,
-       objective='multi:softprob', reg_alpha=0, reg_lambda=1,
-       scale_pos_weight=1, seed=0, silent=True, subsample=1)
-
-Accuracy on test set:59.30%
-
-Classification report:
-             precision    recall  f1-score   support
-
-          1       0.78      0.86      0.82        36
-          3       0.71      0.59      0.64        46
-          5       0.59      0.49      0.54        45
-          7       0.37      0.59      0.45        29
-        old       0.55      0.49      0.52        43
-
-avg / total       0.61      0.59      0.60       199
+# Results
+rskf_results.to_csv("./results/xgb_age_repeatedCV_record.csv", index=False)
+rskf_results = pd.read_csv("./results/xgb_age_repeatedCV_record.csv")
 
 
-# Confusion matrix
+# Accuracy distribution
+xgb_age_acc_distrib = rskf_results["Accuracy"]
+xgb_age_acc_distrib.columns=["Accuracy"]
+xgb_age_acc_distrib.to_csv("./results/xgb_age_acc_distrib.csv", header=True, index=False)
+xgb_age_acc_distrib = pd.read_csv("./results/xgb_age_acc_distrib.csv")
+xgb_age_acc_distrib = np.round(100*xgb_age_acc_distrib)
 
-```python
-class_names = y_test.sort_values().unique()
-# class_names = ["1", "3", "5", "7", "old"]
-cm = confusion_matrix(y_test, y_pred)
-np.set_printoptions(precision=2)
+plt.figure(figsize=(2.25,3))
+sns.distplot(xgb_age_acc_distrib, kde=False, bins=12)
+plt.savefig("./plots/xgb_age_acc_distrib.pdf", bbox_inches="tight")
 
-# print(y_test.unique())
-# print(cm)
-plt.figure()
-plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
-plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len(
-    class_names) - 1.5, (len(class_names) + 0.2)], color="darkblue", style="italic", size="small")
+class_names = y.sort_values().unique()
+xgb_age_per_class_acc_distrib = pd.DataFrame(rskf_per_class_results, columns=class_names)
+xgb_age_per_class_acc_distrib.dropna().to_csv("./results/xgb_age_per_class_acc_distrib.csv")
+xgb_age_per_class_acc_distrib = pd.read_csv("./results/xgb_age_per_class_acc_distrib.csv", index_col=0)
+xgb_age_per_class_acc_distrib = np.round(100*xgb_age_per_class_acc_distrib)
+xgb_age_per_class_acc_distrib_describe = xgb_age_per_class_acc_distrib.describe()
+xgb_age_per_class_acc_distrib_describe.to_csv("./results/xgb_age_per_class_acc_distrib.csv")
 
-plt.savefig("./plots/xgb_CM_age_rus_AGandAR.png", bbox_inches="tight")
+xgb_age_per_class_acc_distrib = pd.melt(xgb_age_per_class_acc_distrib, var_name="Age")
+xgb_age_per_class_acc_distrib
+plt.figure(figsize=(4.75, 3))
+plt.rc('font', family='Helvetica')
+sns.violinplot(x="Age", y="value", cut=0, data=xgb_age_per_class_acc_distrib)
+sns.despine(left=True)
+plt.xticks(rotation=45, ha="right")
+plt.ylabel("Prediction accuracy")
+plt.savefig("./plots/xgb_age_per_class_acc_distrib.pdf", bbox_inches="tight")
+
+
 
 ```
 
-# Feature Importances
 
-```python
-fig = xgb.plot_importance(model,
-                    # importance_type="gain",
-                    height=0.4,
-                    title="Importance of predictor of age",
-                    # xlabel="Average gain when feature is used",
-                    ylabel="")
 
-plt.savefig("./plots/xgb_feat_imp_age_rus_AGandAR.png", bbox_inches="tight")
-```
-
-Importances:
-
-```python
-print(df_age.columns[[0, 5, 6, 3]])
-```
-Index(['3855.53371', '1900.76462', '1745.50175', '2922.99216'], dtype='object')
-
-# Field test
-```python
-X_test = df_fieldtest_age
-y_test = df_fieldtest_age.index
-
-y_test
-start = time()
-y_pred = model.predict(X_test)
-elapsed = time() - start
-
-print("Time elapsed: {0:.2f} seconds".format(elapsed))
-print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
-    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
-
-from sklearn import metrics
-metrics.precision_score(y_test, y_pred, average=None)
-
-```
-Precision: array([ 0.57,  0.33,  0.  ,  0.3 ,  0.  ])
+## # Optimising Gradient boosting with XGBoost
+##
+## ```python
+##
+## # Parameter search
+##
+## # features & labels
+## X = df_age.astype(float)
+## y = df_age.index
+##
+## # under-sample over-represented classes
+## rus = RandomUnderSampler(random_state=34)
+## X_resampled, y_resampled = rus.fit_sample(X, y)
+##
+## X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+## y_resampled_df = X_resampled_df.index
+##
+## # cross-val settings
+## seed = 4
+## validation_size = 0.3
+## num_splits = 10
+## scoring = "accuracy"
+##
+## # cross validation algorithm
+## sss = StratifiedShuffleSplit(
+    ## n_splits=num_splits, test_size=validation_size, random_state=seed)
+## sss.split(X_resampled_df, y_resampled_df)
+##
+## # base algorithm settings
+## classifier = XGBClassifier(nthread=1)
+##
+## # define hyperparameter space to test
+## # for troubleshooting:
+## # max_depth = [2, 4]
+## # n_estimators = [100, 400, 500]
+## # learning_rate = [0.01, 0.1]
+## # colsample_bytree = [0.1, 1]
+##
+## # the real deal:
+## max_depth = [2, 4, 6, 8]  # 4?
+## n_estimators = [100, 300, 500, 800]  # 400?
+## learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
+## colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
+##
+##
+## parameters = {"max_depth": max_depth,
+              ## "learning_rate": learning_rate,
+              ## "n_estimators": n_estimators,
+              ## "colsample_bytree": colsample_bytree}
+##
+## # Grid search
+## start = time()
+## gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+## scoring=scoring, n_jobs=-1, cv=sss)
+##
+## gsCV_result = gsCV.fit(X_resampled_df, y_resampled_df)
+## elapsed = time() - start
+##
+## # # results
+## print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
+## cv_report(gsCV_result.cv_results_)
+##
+## # Random search
+## # n_iter_search = 20
+## # random_search = RandomizedSearchCV(
+## #     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
+## # start = time()
+## # random_search.fit(X, y)
+## # elapsed = time() - start
+##
+## # results
+## # print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+    ## # elapsed / 60, elapsed))
+## # cv_report(gsCV_result.cv_results_)
+##
+##
+## # means, stdevs = [], []
+## # for params, mean_score, scores in gsCV_result.grid_scores_:
+## #     stdev = scores.std()
+## #     means.append(mean_score)
+## #     stdevs.append(stdev)
+## #     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
+##
+## ```
+##
+## Time elapsed: 27.98 minutes (1678.9 sec)
+## Model with rank: 1
+## Mean validation score: 59.414% ± 1.323%
+## Parameters: {'learning_rate': 0.1, 'n_estimators': 100, 'max_depth': 6, 'colsample_bytree': 0.6}
+##
+## Model with rank: 2
+## Mean validation score: 59.289% ± 1.927%
+## Parameters: {'learning_rate': 0.1, 'n_estimators': 100, 'max_depth': 8, 'colsample_bytree': 0.8}
+##
+## Model with rank: 3
+## Mean validation score: 59.205% ± 0.977%
+## Parameters: {'learning_rate': 0.1, 'n_estimators': 100, 'max_depth': 4, 'colsample_bytree': 0.6}
+##
+## Model with rank: 3
+## Mean validation score: 59.205% ± 1.157%
+## Parameters: {'learning_rate': 0.1, 'n_estimators': 100, 'max_depth': 4, 'colsample_bytree': 0.7}
+##
+## # Finalising model
+## ```python
+## # features & labels
+## X = df_age.astype(float)
+## y = df_age.index
+##
+## # encode Y class values as integers
+## # label_encoder = LabelEncoder()
+## # label_encoder = label_encoder.fit(y)
+## # label_encoded_y = label_encoder.transform(y)
+##
+## # under-sample over-represented classes
+## rus = RandomUnderSampler(random_state=34)
+## X_resampled, y_resampled = rus.fit_sample(X, y)
+##
+## X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+## y_resampled_df = X_resampled_df.index
+##
+## # cross-val settings
+## seed = 4
+## validation_size = 0.25
+## num_splits = 10
+##
+## # splitting dataset
+## X_train, X_test, y_train, y_test = train_test_split(X_resampled_df, y_resampled_df, test_size=validation_size, stratify=None, random_state=seed)
+##
+## # cross validation algorithm
+## sss = StratifiedShuffleSplit(
+    ## n_splits=num_splits, test_size=validation_size, random_state=seed)
+## sss.split(X_train, y_train)
+##
+## # preparing model
+## classifier = XGBClassifier(n_estimators=100,
+                           ## max_depth=6,
+                           ## learning_rate=0.1,
+                           ## colsample_bytree=0.6,
+                           ## nthread=1)
+##
+## # Pipeline
+## model = classifier
+##
+## # LEARN!
+## start = time()
+## model.fit(X_train, y_train)
+## y_pred = model.predict(X_test)
+## elapsed = time() - start
+##
+## print("Time elapsed: {0:.2f} seconds".format(elapsed))
+## print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+    ## model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+##
+## ```
+## Time elapsed: 0.37 seconds
+## Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.6,
+       ## gamma=0, learning_rate=0.1, max_delta_step=0, max_depth=6,
+       ## min_child_weight=1, missing=None, n_estimators=100, nthread=1,
+       ## objective='multi:softprob', reg_alpha=0, reg_lambda=1,
+       ## scale_pos_weight=1, seed=0, silent=True, subsample=1)
+##
+## Accuracy on test set:59.30%
+##
+## Classification report:
+             ## precision    recall  f1-score   support
+##
+          ## 1       0.78      0.86      0.82        36
+          ## 3       0.71      0.59      0.64        46
+          ## 5       0.59      0.49      0.54        45
+          ## 7       0.37      0.59      0.45        29
+        ## old       0.55      0.49      0.52        43
+##
+## avg / total       0.61      0.59      0.60       199
+##
+##
+## # Confusion matrix
+##
+## ```python
+## class_names = y_test.sort_values().unique()
+## # class_names = ["1", "3", "5", "7", "old"]
+## cm = confusion_matrix(y_test, y_pred)
+## np.set_printoptions(precision=2)
+##
+## # print(y_test.unique())
+## # print(cm)
+## plt.figure()
+## plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
+## plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len(
+    ## class_names) - 1.5, (len(class_names) + 0.2)], color="darkblue", style="italic", size="small")
+##
+## plt.savefig("./plots/xgb_CM_age_rus_AGandAR.png", bbox_inches="tight")
+##
+## ```
+##
+## # Feature Importances
+##
+## ```python
+## fig = xgb.plot_importance(model,
+                    ## # importance_type="gain",
+                    ## height=0.4,
+                    ## title="Importance of predictor of age",
+                    ## # xlabel="Average gain when feature is used",
+                    ## ylabel="")
+##
+## plt.savefig("./plots/xgb_feat_imp_age_rus_AGandAR.png", bbox_inches="tight")
+## ```
+##
+## Importances:
+##
+## ```python
+## print(df_age.columns[[0, 5, 6, 3]])
+## ```
+## Index(['3855.53371', '1900.76462', '1745.50175', '2922.99216'], dtype='object')
+##
+## # Field test
+## ```python
+## X_test = df_fieldtest_age
+## y_test = df_fieldtest_age.index
+##
+## y_test
+## start = time()
+## y_pred = model.predict(X_test)
+## elapsed = time() - start
+##
+## print("Time elapsed: {0:.2f} seconds".format(elapsed))
+## print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+    ## model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+##
+## from sklearn import metrics
+## metrics.precision_score(y_test, y_pred, average=None)
+##
+## ```
+## Precision: array([ 0.57,  0.33,  0.  ,  0.3 ,  0.  ])
 
 #########################################
 # PREDICTING AGE OF AG ONLY
@@ -1388,221 +1502,366 @@ plt.savefig("./plots/spot_check_age_rus_AG.png", bbox_inches="tight")
 
 ```
 
-# Optimising Gradient boosting with XGBoost
+
+# BIG LOOP
 
 ```python
 
 # Parameter search
 
 # features & labels
-X = df_age_AG.astype(float)
+X = df_age_AG.values
 y = df_age_AG.index
 
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-# cross-val settings
+# cross validation
 seed = 4
 validation_size = 0.3
-num_splits = 10
+num_splits = 5
+num_repeats = 5
+num_rounds = 5
 scoring = "accuracy"
 
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_resampled, y_resampled)
-
-# base algorithm settings
-classifier = XGBClassifier(nthread=1)
-
-# define hyperparameter space to test
-# for troubleshooting:
-# max_depth = [2, 4]
-# n_estimators = [100, 400, 500]
-# learning_rate = [0.01, 0.1]
-# colsample_bytree = [0.1, 1]
-
-# the real deal:
-max_depth = [2, 4, 6, 8]  # 4?
-n_estimators = [100, 300, 500, 800]  # 400?
-learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
-colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
-
-
-parameters = {"max_depth": max_depth,
-              "learning_rate": learning_rate,
-              "n_estimators": n_estimators,
-              "colsample_bytree": colsample_bytree}
-
-# Grid search
-start = time()
-gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
-scoring=scoring, n_jobs=-1, cv=sss)
-
-gsCV_result = gsCV.fit(X_resampled, y_resampled)
-elapsed = time() - start
-
-# # results
-print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
-cv_report(gsCV_result.cv_results_)
-
-# Random search
-# n_iter_search = 20
-# random_search = RandomizedSearchCV(
-#     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
-# start = time()
-# random_search.fit(X, y)
-# elapsed = time() - start
-
-# results
-# print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
-    # elapsed / 60, elapsed))
-# cv_report(gsCV_result.cv_results_)
-
-
-# means, stdevs = [], []
-# for params, mean_score, scores in gsCV_result.grid_scores_:
-#     stdev = scores.std()
-#     means.append(mean_score)
-#     stdevs.append(stdev)
-#     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
-
-```
-Time elapsed: 7.03 minutes (421.6 sec)
-Model with rank: 1
-Mean validation score: 62.289% ± 4.105%
-Parameters: {'colsample_bytree': 0.6, 'learning_rate': 0.2, 'max_depth': 4, 'n_estimators': 800}
-
-Model with rank: 1
-Mean validation score: 62.289% ± 4.140%
-Parameters: {'colsample_bytree': 1, 'learning_rate': 0.3, 'max_depth': 2, 'n_estimators': 500}
-
-Model with rank: 3
-Mean validation score: 62.048% ± 3.332%
-Parameters: {'colsample_bytree': 0.5, 'learning_rate': 0.3, 'max_depth': 2, 'n_estimators': 500}
-
-Model with rank: 3
-Mean validation score: 62.048% ± 4.766%
-Parameters: {'colsample_bytree': 0.6, 'learning_rate': 0.3, 'max_depth': 4, 'n_estimators': 500}
-
-Model with rank: 3
-Mean validation score: 62.048% ± 3.895%
-Parameters: {'colsample_bytree': 0.8, 'learning_rate': 0.2, 'max_depth': 6, 'n_estimators': 800}
-
-Model with rank: 3
-Mean validation score: 62.048% ± 4.182%
-Parameters: {'colsample_bytree': 1, 'learning_rate': 0.3, 'max_depth': 2, 'n_estimators': 800}
-
-# Finalising model
-```python
-# features & labels
-X = df_age_AG.astype(float)
-y = df_age_AG.index
-
-# encode Y class values as integers
-# label_encoder = LabelEncoder()
-# label_encoder = label_encoder.fit(y)
-# label_encoded_y = label_encoder.transform(y)
-
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-# cross-val settings
-seed = 4
-validation_size = 0.25
-num_splits = 10
-
-# splitting dataset
-X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=validation_size, stratify=None, random_state=seed)
-
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_train, y_train)
-
 # preparing model
-classifier = XGBClassifier(n_estimators=800,
-                           max_depth=4,
-                           learning_rate=0.2,
-                           colsample_bytree=0.6,
-                           nthread=1)
+model = XGBClassifier(nthread=1, seed=seed)
 
-# Pipeline
-model = classifier
+# Grid search paramater space
+colsample_bytree = [0.1, 0.3, 0.5, 0.8, 1]
+learning_rate = [0.001, 0.01, 0.1]
+max_depth = [6, 8, 10]
+min_child_weight = [1, 3, 5, 7]
+n_estimators = [50, 100, 300, 500]
 
-# LEARN!
+# Mini Grid search paramater space
+# colsample_bytree = [0.1, 1]
+# learning_rate = [0.001, 0.01]
+# max_depth = [6, 8]
+# min_child_weight = [1, 3]
+# n_estimators = [100, 300]
+
+parameters = {"colsample_bytree": colsample_bytree,
+              "learning_rate": learning_rate,
+              "min_child_weight": min_child_weight,
+              "n_estimators": n_estimators,
+              "max_depth": max_depth}
+
+
+# repeated random stratified splitting of dataset
+rskf = RepeatedStratifiedKFold(n_splits=num_splits, n_repeats=num_repeats, random_state=seed)
+
+# prepare matrices of results
+rskf_results = pd.DataFrame() # model parameters and global accuracy score
+rskf_per_class_results = [] # per class accuracy scores
+rskf_orphan_preds = pd.DataFrame() # orphan predictions
 start = time()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
+
+for round in range(num_rounds):
+    seed=np.random.randint(0, 81470108)
+
+    # under-sample over-represented classes
+    rus = NearMiss(random_state=seed, ratio="auto")
+    X_resampled, y_resampled = rus.fit_sample(X, y) #produces numpy arrays
+
+    for train_index, test_index in rskf.split(X_resampled, y_resampled):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        # GRID SEARCH
+        # # grid search on each iteration
+        # start = time()
+        # gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+        #                     scoring=scoring, cv=rskf, n_jobs=-1, verbose=1)
+        # gsCV_result = gsCV.fit(X_train, y_train)
+        # best_model = model(**gsCV_result.best_params_)
+
+        # RANDOMSED GRID SEARCH
+        n_iter_search = 10
+        rsCV = RandomizedSearchCV(verbose=1,
+            estimator=model, param_distributions=parameters, n_iter=n_iter_search, cv=rskf, n_jobs=-1)
+        rsCV_result = rsCV.fit(X_train, y_train)
+
+        best_model = XGBClassifier(nthread=1, seed=seed, **rsCV_result.best_params_)
+
+        #fit model
+        best_model.fit(X_train, y_train)
+
+        #test model
+        y_pred = best_model.predict(np.delete(X_resampled, train_index, axis=0))
+        y_test = np.delete(y_resampled, train_index, axis=0)
+        local_cm = confusion_matrix(y_test, y_pred)
+        local_report = classification_report(y_test, y_pred)
+
+        local_rskf_results = pd.DataFrame([("Accuracy",accuracy_score(y_test, y_pred)), ("params",str(rsCV_result.best_params_)), ("seed", best_model.seed), ("TRAIN",str(train_index)), ("TEST",str(test_index)), ("CM", local_cm), ("Classification report", local_report)]).T
+
+        local_rskf_results.columns=local_rskf_results.iloc[0]
+        local_rskf_results = local_rskf_results[1:]
+        rskf_results = rskf_results.append(local_rskf_results)
+
+        #per class accuracy
+        local_support = precision_recall_fscore_support(y_test, y_pred)[3]
+        local_acc = np.diag(local_cm)/local_support
+        rskf_per_class_results.append(local_acc)
+
+
 elapsed = time() - start
+print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+    elapsed / 60, elapsed))
 
-print("Time elapsed: {0:.2f} seconds".format(elapsed))
-print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
-    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
-
-```
-Time elapsed: 0.32 seconds
-Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.6,
-       gamma=0, learning_rate=0.2, max_delta_step=0, max_depth=4,
-       min_child_weight=1, missing=None, n_estimators=800, nthread=1,
-       objective='multi:softprob', reg_alpha=0, reg_lambda=1,
-       scale_pos_weight=1, seed=0, silent=True, subsample=1)
-
-Accuracy on test set:71.01%
-
-Classification report:
-             precision    recall  f1-score   support
-
-          1       1.00      0.80      0.89        15
-          3       0.53      1.00      0.69         9
-          5       0.83      0.62      0.71        16
-          7       0.82      0.64      0.72        14
-        old       0.53      0.60      0.56        15
-
-avg / total       0.76      0.71      0.72        69
+# Results
+rskf_results.to_csv("./results/xgb_AG_age_repeatedCV_record.csv", index=False)
+rskf_results = pd.read_csv("./results/xgb_AG_age_repeatedCV_record.csv")
 
 
-# Confusion matrix
+# Accuracy distribution
+xgb_AG_age_acc_distrib = rskf_results["Accuracy"]
+xgb_AG_age_acc_distrib.columns=["Accuracy"]
+xgb_AG_age_acc_distrib.to_csv("./results/xgb_AG_age_acc_distrib.csv", header=True, index=False)
+xgb_AG_age_acc_distrib = pd.read_csv("./results/xgb_AG_age_acc_distrib.csv")
+xgb_AG_age_acc_distrib = np.round(100*xgb_AG_age_acc_distrib)
 
-```python
-# class_names = y_test.sort_values().unique()
-class_names = ["1", "3", "5", "7", "old"]
-cm = confusion_matrix(y_test, y_pred)
-np.set_printoptions(precision=2)
+plt.figure(figsize=(2.25,3))
+sns.distplot(xgb_AG_age_acc_distrib, kde=False, bins=12)
+plt.savefig("./plots/xgb_AG_age_acc_distrib.pdf", bbox_inches="tight")
 
-# print(y_test.unique())
-# print(cm)
-plt.figure()
-plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
-plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len(
-    class_names) - 1.5, (len(class_names) + 0.2)], color="darkblue", style="italic", size="small")
+class_names = y.sort_values().unique()
+xgb_AG_age_per_class_acc_distrib = pd.DataFrame(rskf_per_class_results, columns=class_names)
+xgb_AG_age_per_class_acc_distrib.dropna().to_csv("./results/xgb_AG_age_per_class_acc_distrib.csv")
+xgb_AG_age_per_class_acc_distrib = pd.read_csv("./results/xgb_AG_age_per_class_acc_distrib.csv", index_col=0)
+xgb_AG_age_per_class_acc_distrib = np.round(100*xgb_AG_age_per_class_acc_distrib)
+xgb_AG_age_per_class_acc_distrib_describe = xgb_AG_age_per_class_acc_distrib.describe()
+xgb_AG_age_per_class_acc_distrib_describe.to_csv("./results/xgb_AG_age_per_class_acc_distrib.csv")
 
-plt.savefig("./plots/xgb_CM_age_rus_AG.png", bbox_inches="tight")
+xgb_AG_age_per_class_acc_distrib = pd.melt(xgb_AG_age_per_class_acc_distrib, var_name="AG age")
+xgb_AG_age_per_class_acc_distrib
+plt.figure(figsize=(4.75, 3))
+plt.rc('font', family='Helvetica')
+sns.violinplot(x="AG age", y="value", cut=0, data=xgb_AG_age_per_class_acc_distrib)
+sns.despine(left=True)
+plt.xticks(rotation=45, ha="right")
+plt.ylabel("Prediction accuracy")
+plt.savefig("./plots/xgb_AG_age_per_class_acc_distrib.pdf", bbox_inches="tight")
 
 ```
 
-# Feature Importances
 
-```python
-fig = xgb.plot_importance(model,
-                    # importance_type="gain",
-                    height=0.4,
-                    title="Importance of predictor of age",
-                    # xlabel="Average gain when feature is used",
-                    ylabel="")
 
-plt.savefig("./plots/xgb_feat_imp_age_rus_AG.png", bbox_inches="tight")
-```
 
-Importances:
 
-```python
-print(df_age_AG.columns[[0, 6, 5, 15]])
-```
-Index(['3855.53371', '1745.50175', '1900.76462', '1028.97811'], dtype='object')
 
+## # Optimising Gradient boosting with XGBoost
+##
+## ```python
+##
+## # Parameter search
+##
+## # features & labels
+## X = df_age_AG.astype(float)
+## y = df_age_AG.index
+##
+## # under-sample over-represented classes
+## rus = RandomUnderSampler(random_state=34)
+## X_resampled, y_resampled = rus.fit_sample(X, y)
+##
+## # cross-val settings
+## seed = 4
+## validation_size = 0.3
+## num_splits = 10
+## scoring = "accuracy"
+##
+## # cross validation algorithm
+## sss = StratifiedShuffleSplit(
+    ## n_splits=num_splits, test_size=validation_size, random_state=seed)
+## sss.split(X_resampled, y_resampled)
+##
+## # base algorithm settings
+## classifier = XGBClassifier(nthread=1)
+##
+## # define hyperparameter space to test
+## # for troubleshooting:
+## # max_depth = [2, 4]
+## # n_estimators = [100, 400, 500]
+## # learning_rate = [0.01, 0.1]
+## # colsample_bytree = [0.1, 1]
+##
+## # the real deal:
+## max_depth = [2, 4, 6, 8]  # 4?
+## n_estimators = [100, 300, 500, 800]  # 400?
+## learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
+## colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
+##
+##
+## parameters = {"max_depth": max_depth,
+              ## "learning_rate": learning_rate,
+              ## "n_estimators": n_estimators,
+              ## "colsample_bytree": colsample_bytree}
+##
+## # Grid search
+## start = time()
+## gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+## scoring=scoring, n_jobs=-1, cv=sss)
+##
+## gsCV_result = gsCV.fit(X_resampled, y_resampled)
+## elapsed = time() - start
+##
+## # # results
+## print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
+## cv_report(gsCV_result.cv_results_)
+##
+## # Random search
+## # n_iter_search = 20
+## # random_search = RandomizedSearchCV(
+## #     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
+## # start = time()
+## # random_search.fit(X, y)
+## # elapsed = time() - start
+##
+## # results
+## # print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+    ## # elapsed / 60, elapsed))
+## # cv_report(gsCV_result.cv_results_)
+##
+##
+## # means, stdevs = [], []
+## # for params, mean_score, scores in gsCV_result.grid_scores_:
+## #     stdev = scores.std()
+## #     means.append(mean_score)
+## #     stdevs.append(stdev)
+## #     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
+##
+## ```
+## Time elapsed: 7.03 minutes (421.6 sec)
+## Model with rank: 1
+## Mean validation score: 62.289% ± 4.105%
+## Parameters: {'colsample_bytree': 0.6, 'learning_rate': 0.2, 'max_depth': 4, 'n_estimators': 800}
+##
+## Model with rank: 1
+## Mean validation score: 62.289% ± 4.140%
+## Parameters: {'colsample_bytree': 1, 'learning_rate': 0.3, 'max_depth': 2, 'n_estimators': 500}
+##
+## Model with rank: 3
+## Mean validation score: 62.048% ± 3.332%
+## Parameters: {'colsample_bytree': 0.5, 'learning_rate': 0.3, 'max_depth': 2, 'n_estimators': 500}
+##
+## Model with rank: 3
+## Mean validation score: 62.048% ± 4.766%
+## Parameters: {'colsample_bytree': 0.6, 'learning_rate': 0.3, 'max_depth': 4, 'n_estimators': 500}
+##
+## Model with rank: 3
+## Mean validation score: 62.048% ± 3.895%
+## Parameters: {'colsample_bytree': 0.8, 'learning_rate': 0.2, 'max_depth': 6, 'n_estimators': 800}
+##
+## Model with rank: 3
+## Mean validation score: 62.048% ± 4.182%
+## Parameters: {'colsample_bytree': 1, 'learning_rate': 0.3, 'max_depth': 2, 'n_estimators': 800}
+##
+## # Finalising model
+## ```python
+## # features & labels
+## X = df_age_AG.astype(float)
+## y = df_age_AG.index
+##
+## # encode Y class values as integers
+## # label_encoder = LabelEncoder()
+## # label_encoder = label_encoder.fit(y)
+## # label_encoded_y = label_encoder.transform(y)
+##
+## # under-sample over-represented classes
+## rus = RandomUnderSampler(random_state=34)
+## X_resampled, y_resampled = rus.fit_sample(X, y)
+##
+## # cross-val settings
+## seed = 4
+## validation_size = 0.25
+## num_splits = 10
+##
+## # splitting dataset
+## X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=validation_size, stratify=None, random_state=seed)
+##
+## # cross validation algorithm
+## sss = StratifiedShuffleSplit(
+    ## n_splits=num_splits, test_size=validation_size, random_state=seed)
+## sss.split(X_train, y_train)
+##
+## # preparing model
+## classifier = XGBClassifier(n_estimators=800,
+                           ## max_depth=4,
+                           ## learning_rate=0.2,
+                           ## colsample_bytree=0.6,
+                           ## nthread=1)
+##
+## # Pipeline
+## model = classifier
+##
+## # LEARN!
+## start = time()
+## model.fit(X_train, y_train)
+## y_pred = model.predict(X_test)
+## elapsed = time() - start
+##
+## print("Time elapsed: {0:.2f} seconds".format(elapsed))
+## print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+    ## model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+##
+## ```
+## Time elapsed: 0.32 seconds
+## Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.6,
+       ## gamma=0, learning_rate=0.2, max_delta_step=0, max_depth=4,
+       ## min_child_weight=1, missing=None, n_estimators=800, nthread=1,
+       ## objective='multi:softprob', reg_alpha=0, reg_lambda=1,
+       ## scale_pos_weight=1, seed=0, silent=True, subsample=1)
+##
+## Accuracy on test set:71.01%
+##
+## Classification report:
+             ## precision    recall  f1-score   support
+##
+          ## 1       1.00      0.80      0.89        15
+          ## 3       0.53      1.00      0.69         9
+          ## 5       0.83      0.62      0.71        16
+          ## 7       0.82      0.64      0.72        14
+        ## old       0.53      0.60      0.56        15
+##
+## avg / total       0.76      0.71      0.72        69
+##
+##
+## # Confusion matrix
+##
+## ```python
+## # class_names = y_test.sort_values().unique()
+## class_names = ["1", "3", "5", "7", "old"]
+## cm = confusion_matrix(y_test, y_pred)
+## np.set_printoptions(precision=2)
+##
+## # print(y_test.unique())
+## # print(cm)
+## plt.figure()
+## plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
+## plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len(
+    ## class_names) - 1.5, (len(class_names) + 0.2)], color="darkblue", style="italic", size="small")
+##
+## plt.savefig("./plots/xgb_CM_age_rus_AG.png", bbox_inches="tight")
+##
+## ```
+##
+## # Feature Importances
+##
+## ```python
+## fig = xgb.plot_importance(model,
+                    ## # importance_type="gain",
+                    ## height=0.4,
+                    ## title="Importance of predictor of age",
+                    ## # xlabel="Average gain when feature is used",
+                    ## ylabel="")
+##
+## plt.savefig("./plots/xgb_feat_imp_age_rus_AG.png", bbox_inches="tight")
+## ```
+##
+## Importances:
+##
+## ```python
+## print(df_age_AG.columns[[0, 6, 5, 15]])
+## ```
+## Index(['3855.53371', '1745.50175', '1900.76462', '1028.97811'], dtype='object')
+##
 
 
 #########################################
@@ -1669,206 +1928,347 @@ plt.savefig("./plots/spot_check_age_rus_AR.png", bbox_inches="tight")
 
 ```
 
-# Optimising Gradient boosting with XGBoost
+# BIG LOOP
 
 ```python
 
 # Parameter search
 
 # features & labels
-X = df_age_AR.astype(float)
+X = df_age_AR.values
 y = df_age_AR.index
 
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-# cross-val settings
+# cross validation
 seed = 4
 validation_size = 0.3
-num_splits = 10
+num_splits = 5
+num_repeats = 5
+num_rounds = 5
 scoring = "accuracy"
 
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_resampled, y_resampled)
-
-# base algorithm settings
-classifier = XGBClassifier(nthread=1)
-
-# define hyperparameter space to test
-# for troubleshooting:
-# max_depth = [2, 4]
-# n_estimators = [100, 400, 500]
-# learning_rate = [0.01, 0.1]
-# colsample_bytree = [0.1, 1]
-
-# the real deal:
-max_depth = [2, 4, 6, 8]  # 4?
-n_estimators = [100, 300, 500, 800]  # 400?
-learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
-colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
-
-
-parameters = {"max_depth": max_depth,
-              "learning_rate": learning_rate,
-              "n_estimators": n_estimators,
-              "colsample_bytree": colsample_bytree}
-
-# Grid search
-start = time()
-gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
-scoring=scoring, n_jobs=-1, cv=sss)
-
-gsCV_result = gsCV.fit(X_resampled, y_resampled)
-elapsed = time() - start
-
-# # results
-print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
-cv_report(gsCV_result.cv_results_)
-
-# Random search
-# n_iter_search = 20
-# random_search = RandomizedSearchCV(
-#     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
-# start = time()
-# random_search.fit(X, y)
-# elapsed = time() - start
-
-# results
-# print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
-    # elapsed / 60, elapsed))
-# cv_report(gsCV_result.cv_results_)
-
-
-# means, stdevs = [], []
-# for params, mean_score, scores in gsCV_result.grid_scores_:
-#     stdev = scores.std()
-#     means.append(mean_score)
-#     stdevs.append(stdev)
-#     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
-
-```
-Time elapsed: 13.46 minutes (807.8 sec)
-Model with rank: 1
-Mean validation score: 64.679% ± 4.986%
-Parameters: {'colsample_bytree': 0.7, 'learning_rate': 0.3, 'max_depth': 6, 'n_estimators': 800}
-
-Model with rank: 2
-Mean validation score: 64.615% ± 4.787%
-Parameters: {'colsample_bytree': 0.7, 'learning_rate': 0.3, 'max_depth': 6, 'n_estimators': 500}
-
-Model with rank: 3
-Mean validation score: 64.551% ± 3.749%
-Parameters: {'colsample_bytree': 0.5, 'learning_rate': 0.1, 'max_depth': 8, 'n_estimators': 100}
-
-
-# Finalising model
-```python
-# features & labels
-X = df_age_AR.astype(float)
-y = df_age_AR.index
-
-# encode Y class values as integers
-# label_encoder = LabelEncoder()
-# label_encoder = label_encoder.fit(y)
-# label_encoded_y = label_encoder.transform(y)
-
-# under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
-
-# cross-val settings
-seed = 4
-validation_size = 0.25
-num_splits = 10
-
-# splitting dataset
-X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=validation_size, stratify=None, random_state=seed)
-
-# cross validation algorithm
-sss = StratifiedShuffleSplit(
-    n_splits=num_splits, test_size=validation_size, random_state=seed)
-sss.split(X_train, y_train)
-
 # preparing model
-classifier = XGBClassifier(n_estimators=800,
-                           max_depth=6,
-                           learning_rate=0.3,
-                           colsample_bytree=0.7,
-                           nthread=1)
+model = XGBClassifier(nthread=1, seed=seed)
 
-# Pipeline
-model = classifier
+# Grid search paramater space
+colsample_bytree = [0.1, 0.3, 0.5, 0.8, 1]
+learning_rate = [0.001, 0.01, 0.1]
+max_depth = [6, 8, 10]
+min_child_weight = [1, 3, 5, 7]
+n_estimators = [50, 100, 300, 500]
 
-# LEARN!
+# Mini Grid search paramater space
+# colsample_bytree = [0.1, 1]
+# learning_rate = [0.001, 0.01]
+# max_depth = [6, 8]
+# min_child_weight = [1, 3]
+# n_estimators = [100, 300]
+
+parameters = {"colsample_bytree": colsample_bytree,
+              "learning_rate": learning_rate,
+              "min_child_weight": min_child_weight,
+              "n_estimators": n_estimators,
+              "max_depth": max_depth}
+
+
+# repeated random stratified splitting of dataset
+rskf = RepeatedStratifiedKFold(n_splits=num_splits, n_repeats=num_repeats, random_state=seed)
+
+# prepare matrices of results
+rskf_results = pd.DataFrame() # model parameters and global accuracy score
+rskf_per_class_results = [] # per class accuracy scores
+rskf_orphan_preds = pd.DataFrame() # orphan predictions
 start = time()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
+
+for round in range(num_rounds):
+    seed=np.random.randint(0, 81470108)
+
+    # under-sample over-represented classes
+    rus = NearMiss(random_state=seed, ratio="auto")
+    X_resampled, y_resampled = rus.fit_sample(X, y) #produces numpy arrays
+
+    for train_index, test_index in rskf.split(X_resampled, y_resampled):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        # GRID SEARCH
+        # # grid search on each iteration
+        # start = time()
+        # gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+        #                     scoring=scoring, cv=rskf, n_jobs=-1, verbose=1)
+        # gsCV_result = gsCV.fit(X_train, y_train)
+        # best_model = model(**gsCV_result.best_params_)
+
+        # RANDOMSED GRID SEARCH
+        n_iter_search = 10
+        rsCV = RandomizedSearchCV(verbose=1,
+            estimator=model, param_distributions=parameters, n_iter=n_iter_search, cv=rskf, n_jobs=-1)
+        rsCV_result = rsCV.fit(X_train, y_train)
+
+        best_model = XGBClassifier(nthread=1, seed=seed, **rsCV_result.best_params_)
+
+        #fit model
+        best_model.fit(X_train, y_train)
+
+        #test model
+        y_pred = best_model.predict(np.delete(X_resampled, train_index, axis=0))
+        y_test = np.delete(y_resampled, train_index, axis=0)
+        local_cm = confusion_matrix(y_test, y_pred)
+        local_report = classification_report(y_test, y_pred)
+
+        local_rskf_results = pd.DataFrame([("Accuracy",accuracy_score(y_test, y_pred)), ("params",str(rsCV_result.best_params_)), ("seed", best_model.seed), ("TRAIN",str(train_index)), ("TEST",str(test_index)), ("CM", local_cm), ("Classification report", local_report)]).T
+
+        local_rskf_results.columns=local_rskf_results.iloc[0]
+        local_rskf_results = local_rskf_results[1:]
+        rskf_results = rskf_results.append(local_rskf_results)
+
+        #per class accuracy
+        local_support = precision_recall_fscore_support(y_test, y_pred)[3]
+        local_acc = np.diag(local_cm)/local_support
+        rskf_per_class_results.append(local_acc)
+
+
 elapsed = time() - start
+print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+    elapsed / 60, elapsed))
 
-print("Time elapsed: {0:.2f} seconds".format(elapsed))
-print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
-    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
-
-```
-Time elapsed: 0.69 seconds
-Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.7,
-       gamma=0, learning_rate=0.3, max_delta_step=0, max_depth=6,
-       min_child_weight=1, missing=None, n_estimators=800, nthread=1,
-       objective='multi:softprob', reg_alpha=0, reg_lambda=1,
-       scale_pos_weight=1, seed=0, silent=True, subsample=1)
-
-Accuracy on test set:71.54%
-
-Classification report:
-             precision    recall  f1-score   support
-
-          1       0.77      0.80      0.78        25
-          3       0.83      0.80      0.81        30
-          5       0.57      0.64      0.60        25
-          7       0.67      0.90      0.77        20
-        old       0.75      0.50      0.60        30
-
-avg / total       0.72      0.72      0.71       130
+# Results
+rskf_results.to_csv("./results/xgb_AR_age_repeatedCV_record.csv", index=False)
+rskf_results = pd.read_csv("./results/xgb_AR_age_repeatedCV_record.csv")
 
 
-# Confusion matrix
+# Accuracy distribution
+xgb_AR_age_acc_distrib = rskf_results["Accuracy"]
+xgb_AR_age_acc_distrib.columns=["Accuracy"]
+xgb_AR_age_acc_distrib.to_csv("./results/xgb_AR_age_acc_distrib.csv", header=True, index=False)
+xgb_AR_age_acc_distrib = pd.read_csv("./results/xgb_AR_age_acc_distrib.csv")
+xgb_AR_age_acc_distrib = np.round(100*xgb_AR_age_acc_distrib)
 
-```python
-# class_names = y_test.sort_values().unique()
-class_names = ["1", "3", "5", "7", "old"]
-cm = confusion_matrix(y_test, y_pred)
-np.set_printoptions(precision=2)
+plt.figure(figsize=(2.25,3))
+sns.distplot(xgb_AR_age_acc_distrib, kde=False, bins=12)
+plt.savefig("./plots/xgb_AR_age_acc_distrib.pdf", bbox_inches="tight")
 
-# print(y_test.unique())
-# print(cm)
-plt.figure()
-plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
-plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len(
-    class_names) - 1.5, (len(class_names) + 0.2)], color="darkblue", style="italic", size="small")
+class_names = y.sort_values().unique()
+xgb_AR_age_per_class_acc_distrib = pd.DataFrame(rskf_per_class_results, columns=class_names)
+xgb_AR_age_per_class_acc_distrib.dropna().to_csv("./results/xgb_AR_age_per_class_acc_distrib.csv")
+xgb_AR_age_per_class_acc_distrib = pd.read_csv("./results/xgb_AR_age_per_class_acc_distrib.csv", index_col=0)
+xgb_AR_age_per_class_acc_distrib = np.round(100*xgb_AR_age_per_class_acc_distrib)
+xgb_AR_age_per_class_acc_distrib_describe = xgb_AR_age_per_class_acc_distrib.describe()
+xgb_AR_age_per_class_acc_distrib_describe.to_csv("./results/xgb_AR_age_per_class_acc_distrib.csv")
 
-plt.savefig("./plots/xgb_CM_age_rus_AR.png", bbox_inches="tight")
+xgb_AR_age_per_class_acc_distrib = pd.melt(xgb_AR_age_per_class_acc_distrib, var_name="AG age")
+xgb_AR_age_per_class_acc_distrib
+plt.figure(figsize=(4.75, 3))
+plt.rc('font', family='Helvetica')
+sns.violinplot(x="AG age", y="value", cut=0, data=xgb_AR_age_per_class_acc_distrib)
+sns.despine(left=True)
+plt.xticks(rotation=45, ha="right")
+plt.ylabel("Prediction accuracy")
+plt.savefig("./plots/xgb_AR_age_per_class_acc_distrib.pdf", bbox_inches="tight")
 
 ```
 
-# Feature Importances
 
-```python
-fig = xgb.plot_importance(model,
-                    # importance_type="gain",
-                    height=0.4,
-                    title="Importance of predictor of age",
-                    # xlabel="Average gain when feature is used",
-                    ylabel="")
 
-plt.savefig("./plots/xgb_feat_imp_age_rus_AR.png", bbox_inches="tight")
-```
-
-**Importances:**
-
-```python
-print(df_age_AR.columns[[5, 6, 0]])
-```
-Index(['1900.76462', '1745.50175', '3855.53371'], dtype='object')
+##  # Optimising Gradient boosting with XGBoost
+##
+##  ```python
+##
+##  # Parameter search
+##
+##  # features & labels
+##  X = df_age_AR.astype(float)
+##  y = df_age_AR.index
+##
+##  # under-sample over-represented classes
+##  rus = RandomUnderSampler(random_state=34)
+##  X_resampled, y_resampled = rus.fit_sample(X, y)
+##
+##  # cross-val settings
+##  seed = 4
+##  validation_size = 0.3
+##  num_splits = 10
+##  scoring = "accuracy"
+##
+##  # cross validation algorithm
+##  sss = StratifiedShuffleSplit(
+    ##  n_splits=num_splits, test_size=validation_size, random_state=seed)
+##  sss.split(X_resampled, y_resampled)
+##
+##  # base algorithm settings
+##  classifier = XGBClassifier(nthread=1)
+##
+##  # define hyperparameter space to test
+##  # for troubleshooting:
+##  # max_depth = [2, 4]
+##  # n_estimators = [100, 400, 500]
+##  # learning_rate = [0.01, 0.1]
+##  # colsample_bytree = [0.1, 1]
+##
+##  # the real deal:
+##  max_depth = [2, 4, 6, 8]  # 4?
+##  n_estimators = [100, 300, 500, 800]  # 400?
+##  learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
+##  colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
+##
+##
+##  parameters = {"max_depth": max_depth,
+              ##  "learning_rate": learning_rate,
+              ##  "n_estimators": n_estimators,
+              ##  "colsample_bytree": colsample_bytree}
+##
+##  # Grid search
+##  start = time()
+##  gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+##  scoring=scoring, n_jobs=-1, cv=sss)
+##
+##  gsCV_result = gsCV.fit(X_resampled, y_resampled)
+##  elapsed = time() - start
+##
+##  # # results
+##  print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
+##  cv_report(gsCV_result.cv_results_)
+##
+##  # Random search
+##  # n_iter_search = 20
+##  # random_search = RandomizedSearchCV(
+##  #     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
+##  # start = time()
+##  # random_search.fit(X, y)
+##  # elapsed = time() - start
+##
+##  # results
+##  # print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+    ##  # elapsed / 60, elapsed))
+##  # cv_report(gsCV_result.cv_results_)
+##
+##
+##  # means, stdevs = [], []
+##  # for params, mean_score, scores in gsCV_result.grid_scores_:
+##  #     stdev = scores.std()
+##  #     means.append(mean_score)
+##  #     stdevs.append(stdev)
+##  #     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
+##
+##  ```
+##  Time elapsed: 13.46 minutes (807.8 sec)
+##  Model with rank: 1
+##  Mean validation score: 64.679% ± 4.986%
+##  Parameters: {'colsample_bytree': 0.7, 'learning_rate': 0.3, 'max_depth': 6, 'n_estimators': 800}
+##
+##  Model with rank: 2
+##  Mean validation score: 64.615% ± 4.787%
+##  Parameters: {'colsample_bytree': 0.7, 'learning_rate': 0.3, 'max_depth': 6, 'n_estimators': 500}
+##
+##  Model with rank: 3
+##  Mean validation score: 64.551% ± 3.749%
+##  Parameters: {'colsample_bytree': 0.5, 'learning_rate': 0.1, 'max_depth': 8, 'n_estimators': 100}
+##
+##
+##  # Finalising model
+##  ```python
+##  # features & labels
+##  X = df_age_AR.astype(float)
+##  y = df_age_AR.index
+##
+##  # encode Y class values as integers
+##  # label_encoder = LabelEncoder()
+##  # label_encoder = label_encoder.fit(y)
+##  # label_encoded_y = label_encoder.transform(y)
+##
+##  # under-sample over-represented classes
+##  rus = RandomUnderSampler(random_state=34)
+##  X_resampled, y_resampled = rus.fit_sample(X, y)
+##
+##  # cross-val settings
+##  seed = 4
+##  validation_size = 0.25
+##  num_splits = 10
+##
+##  # splitting dataset
+##  X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=validation_size, stratify=None, random_state=seed)
+##
+##  # cross validation algorithm
+##  sss = StratifiedShuffleSplit(
+    ##  n_splits=num_splits, test_size=validation_size, random_state=seed)
+##  sss.split(X_train, y_train)
+##
+##  # preparing model
+##  classifier = XGBClassifier(n_estimators=800,
+                           ##  max_depth=6,
+                           ##  learning_rate=0.3,
+                           ##  colsample_bytree=0.7,
+                           ##  nthread=1)
+##
+##  # Pipeline
+##  model = classifier
+##
+##  # LEARN!
+##  start = time()
+##  model.fit(X_train, y_train)
+##  y_pred = model.predict(X_test)
+##  elapsed = time() - start
+##
+##  print("Time elapsed: {0:.2f} seconds".format(elapsed))
+##  print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+    ##  model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+##
+##  ```
+##  Time elapsed: 0.69 seconds
+##  Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.7,
+       ##  gamma=0, learning_rate=0.3, max_delta_step=0, max_depth=6,
+       ##  min_child_weight=1, missing=None, n_estimators=800, nthread=1,
+       ##  objective='multi:softprob', reg_alpha=0, reg_lambda=1,
+       ##  scale_pos_weight=1, seed=0, silent=True, subsample=1)
+##
+##  Accuracy on test set:71.54%
+##
+##  Classification report:
+             ##  precision    recall  f1-score   support
+##
+          ##  1       0.77      0.80      0.78        25
+          ##  3       0.83      0.80      0.81        30
+          ##  5       0.57      0.64      0.60        25
+          ##  7       0.67      0.90      0.77        20
+        ##  old       0.75      0.50      0.60        30
+##
+##  avg / total       0.72      0.72      0.71       130
+##
+##
+##  # Confusion matrix
+##
+##  ```python
+##  # class_names = y_test.sort_values().unique()
+##  class_names = ["1", "3", "5", "7", "old"]
+##  cm = confusion_matrix(y_test, y_pred)
+##  np.set_printoptions(precision=2)
+##
+##  # print(y_test.unique())
+##  # print(cm)
+##  plt.figure()
+##  plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
+##  plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len(
+    ##  class_names) - 1.5, (len(class_names) + 0.2)], color="darkblue", style="italic", size="small")
+##
+##  plt.savefig("./plots/xgb_CM_age_rus_AR.png", bbox_inches="tight")
+##
+##  ```
+##
+##  # Feature Importances
+##
+##  ```python
+##  fig = xgb.plot_importance(model,
+                    ##  # importance_type="gain",
+                    ##  height=0.4,
+                    ##  title="Importance of predictor of age",
+                    ##  # xlabel="Average gain when feature is used",
+                    ##  ylabel="")
+##
+##  plt.savefig("./plots/xgb_feat_imp_age_rus_AR.png", bbox_inches="tight")
+##  ```
+##
+##  **Importances:**
+##
+##  ```python
+##  print(df_age_AR.columns[[5, 6, 0]])
+##  ```
+##  Index(['1900.76462', '1745.50175', '3855.53371'], dtype='object')
