@@ -5,6 +5,7 @@ import os
 import glob
 import re
 from time import time
+# from tqdm import tqdm
 from collections import Counter
 
 import numpy as np
@@ -174,13 +175,13 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
     plt.ylabel('Feature Importance Score')
 
 # import full dataset
-df_full = pd.read_table("./mosquitoes_spectra (170607).dat")
+df_full = pd.read_table("./mosquitoes_spectra (170623).dat")
 
 # import species+age data
 df_species_age = df_full.copy()
 df_species_age.index = df_species_age["Species"] + "_" + df_species_age["Age"]
 
-df_species_age = df_species_age.iloc[:,5:-1]
+df_species_age = df_species_age.iloc[:,5:]
 
 # import field test dataset
 # df_fieldtest = pd.read_table("field_mosquitoes_spectra.dat")
@@ -188,18 +189,18 @@ df_species_age = df_species_age.iloc[:,5:-1]
 
 # df_fieldtest_species_age = df_fieldtest.copy()
 # df_fieldtest_species_age.index = df_fieldtest_species_age["Species"] + "_" + df_fieldtest_species_age["Age"]
-# df_fieldtest_species_age = df_fieldtest_species_age.iloc[:,5:-1]
+# df_fieldtest_species_age = df_fieldtest_species_age.iloc[:,5:]
 # df_fieldtest_species_age[df_fieldtest_species_age.columns] = StandardScaler().fit_transform(df_fieldtest_species_age[df_fieldtest_species_age.columns].as_matrix())
 #
 #
 # df_fieldtest_age = df_fieldtest.copy()
 # df_fieldtest_age.index = df_fieldtest_age["Age"]
-# df_fieldtest_age = df_fieldtest_age.iloc[:,5:-1]
+# df_fieldtest_age = df_fieldtest_age.iloc[:,5:]
 # df_fieldtest_age[df_fieldtest_age.columns] = StandardScaler().fit_transform(df_fieldtest_age[df_fieldtest_age.columns].as_matrix())
 #
 # df_fieldtest_species = df_fieldtest.copy()
 # df_fieldtest_species.index = df_fieldtest_species["Species"]
-# df_fieldtest_species = df_fieldtest_species.iloc[:,5:-1]
+# df_fieldtest_species = df_fieldtest_species.iloc[:,5:]
 # df_fieldtest_species[df_fieldtest_species.columns] = StandardScaler().fit_transform(df_fieldtest_species[df_fieldtest_species.columns].as_matrix())
 
 # transform data
@@ -208,7 +209,12 @@ df_species_age[df_species_age.columns] = StandardScaler().fit_transform(df_speci
 # select age data
 df_age = df_full.copy()
 df_age.index = df_age["Age"]
-df_age = df_age.iloc[:,5:-1]
+df_age = df_age.iloc[:,5:]
+
+df_real_age = df_full.copy()
+df_real_age.index = df_real_age["Real age"]
+df_age = df_age.iloc[:,5:]
+
 # transform data
 df_age[df_age.columns] = StandardScaler().fit_transform(df_age[df_age.columns].as_matrix())
 
@@ -216,7 +222,7 @@ df_age[df_age.columns] = StandardScaler().fit_transform(df_age[df_age.columns].a
 df_age_AG = df_full.copy()
 df_age_AG.index = df_age_AG["Age"]
 df_age_AG = df_age_AG[df_age_AG["Species"] == "AG"]
-df_age_AG = df_age_AG.iloc[:,5:-1]
+df_age_AG = df_age_AG.iloc[:,5:]
 # transform data
 df_age_AG[df_age_AG.columns] = StandardScaler().fit_transform(df_age_AG[df_age_AG.columns].as_matrix())
 df_age_AG.tail()
@@ -225,7 +231,7 @@ df_age_AG.tail()
 df_age_AR = df_full.copy()
 df_age_AR.index = df_age_AR["Age"]
 df_age_AR = df_age_AR[df_age_AR["Species"] == "AR"]
-df_age_AR = df_age_AR.iloc[:,5:-1]
+df_age_AR = df_age_AR.iloc[:,5:]
 # transform data
 df_age_AR[df_age_AR.columns] = StandardScaler().fit_transform(df_age_AR[df_age_AR.columns].as_matrix())
 df_age_AR.tail()
@@ -233,7 +239,7 @@ df_age_AR.tail()
 # select species data
 df_species = df_full.copy()
 df_species.index = df_species["Species"]
-df_species = df_species.iloc[:,5:-1]
+df_species = df_species.iloc[:,5:]
 
 # transform species data
 df_species[df_species.columns] = StandardScaler().fit_transform(df_species[df_species.columns].as_matrix())
