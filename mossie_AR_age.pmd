@@ -170,7 +170,7 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
 # %% import data
 df = pd.read_table("./mosquitoes_spectra.dat", index_col="Age")
 
-df = df.ix[:,1:-1]
+df = df.iloc[:,1:-1]
 
 # %% transform data
 df[df.columns] = StandardScaler().fit_transform(df[df.columns].as_matrix())
