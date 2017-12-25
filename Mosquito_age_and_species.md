@@ -1,8 +1,10 @@
 Predicting both age and species of *Anopheles gambiae* and *Anopheles arabiensis* from mid-infrared spectra
 ===========================================================================================================
 
-Spot-checking baseline performance of various algorithms
---------------------------------------------------------
+Predicting SPECIES
+------------------
+
+### Spot-checking baseline performance of various algorithms
 
 To determine which algorithm may be best suited to identifying the species of a mosquito based on its MIRS and to identify its age age class, we first compared the baseline performance of 6 major algorithms, linear regression, nearest neighbours, ensemble decisions trees, or Naïve Bayes.
 
@@ -10,11 +12,13 @@ With output category consisting of ages [1, 3, 5, 7, 9, old], XGB achieved the b
 
 ![Spotchecking Species](./plots/spot_check_species_rus.png)
 
+### Optimising XGBoost model
+
 Support Vector machines and eXtreme Gradient Boost achieved highest performance when predicting mosquito species. After tuning using repeated stratified random under-sampling, XGB achieved 95.49% ± 0.14% accuracy on average.
 
 ![Species classification](plots/xgb_sp_per_class_acc_distrib.png)
 
-### Top features
+### Top XGBoost features
 
 Four wavelengths stood out as being particularly important to the prediction:['1901', '1026', '401', '3856'].
 
@@ -22,8 +26,11 @@ Ranked by decreasing importance:
 
 ![Feature importances](plots/xgb_sp_feat_imp.png)
 
-Predicting age for *A. gambiae*
--------------------------------
+Predicting AGE
+==============
+
+Predicting age for *A. gambiae*, as classification
+--------------------------------------------------
 
 ### Spot-checking baseline performance of various algorithms
 
@@ -31,21 +38,9 @@ With output category consisting of ages [1, 3, 5, 7, 9, old], XGB achieved the b
 
 ![Spotchecking age](plots/spot_check_age_rus_AG.png)
 
-### After tuning Logistic regression
+Logistic regression provides the most accurate prediction.
 
-#### Per class prediction accuracy
-
-![Confusion matrix AG age](plots/xgb_AG_age_per_class_acc_distrib.png)
-
-#### Top features
-
-Ranked by decreasing importance:
-
-![Feature importances](plots/xgb_AG_age_feat_imp.png)
-
-Two wavelengths stood out as being particularly important to the prediction: '1746', '1901'
-
-### After tuning logistic regression parameters
+### Optimising Logistic regression models
 
 #### Per class prediction accuracy
 
@@ -57,7 +52,19 @@ Ranked by decreasing importance:
 
 ![Feature importances](plots/lr_AG_age_feat_imp.png)
 
-#### Predicting age of AR
+Predicting age for *A. gambiae*, as regression
+----------------------------------------------
+
+### Spot-checking baseline performance of various algorithms
+
+With output category consisting of ages as continuous variable, Elastic Nets and Logistic regression achieved the best prediction accuracy at baseline settings:
+
+![Spotchecking age](plots/spot_check_real_age_AG.png)
+
+### Optimising Elastic Nets
+
+Predicting age of AR, as classification
+---------------------------------------
 
 #### Spot-checking baseline performance of various algorithms
 
