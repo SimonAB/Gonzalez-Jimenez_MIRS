@@ -1,7 +1,6 @@
 # %% import modules
 import os
 import warnings
-import ast
 
 import numpy as np
 import pandas as pd
@@ -167,7 +166,7 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
 
 #%% import data
 df_real_age = pd.read_table("./mosquitoes_spectra (170623).dat", index_col="Real age")
-df_real_age = df_real_age.iloc[:, 4:-1]
+df_real_age = df_real_age.ix[:, 4:-1]
 df_real_age.head()
 
 #%% 
@@ -281,7 +280,6 @@ for train_index, test_index in rkf.split(X, y):
     y_train, y_test = y[train_index], y[test_index]
     #fit model
     regressor.fit(X_train, y_train)
-    
     # test model
     y_pred = regressor.predict(X_test)
     r2 = r2_score(y_test, y_pred)
@@ -378,7 +376,7 @@ scoring = "neg_mean_squared_error"
 kfold = KFold(n_splits=num_splits, random_state=seed)
 
 # base algorithm settings
-model = XGBRegressor(nthread=1)
+regressor = XGBRegressor(nthread=1)
 
 # define hyperparameter space to test
 ## for troubleshooting:
@@ -414,18 +412,10 @@ for train_index, test_index in rkf.split(X, y):
     y_train, y_test = y[train_index], y[test_index]
 
     # GRID SEARCH
-    # gsCV = GridSearchCV(verbose=1, estimator=model, param_grid=parameters,
-    #                     scoring=scoring, cv=kfold, n_jobs=-1)
-    # CV_result = gsCV.fit(X_train, y_train)
-    # best_model = XGBRegressor(nthread=1, **CV_result.best_params_)
-
-    # RANDOMSED GRID SEARCH
-    n_iter_search = 100
-    rsCV = RandomizedSearchCV(verbose=1,
-        estimator=model, param_distributions=parameters, n_iter=n_iter_search, n_jobs=-1)
-    CV_result = rsCV.fit(X_train, y_train)
-    
-    best_model = XGBRegressor(nthread=1, seed=seed, **rsCV_result.best_params_)
+    gsCV = GridSearchCV(estimator=regressor, param_grid=parameters,
+                        scoring=scoring, cv=kfold, n_jobs=-1)
+    CV_result = gsCV.fit(X_train, y_train)
+    best_model = XGBRegressor(nthread=1, **CV_result.best_params_)
 
     #fit model
     best_model.fit(X_train, y_train)
@@ -491,8 +481,8 @@ plt.axvline(x=featimp_global_mean, color="r", ls="--", dash_capstyle="butt")
 sns.despine()
 
 # Add mean accuracy of best models to plots
-plt.annotate("MSE: {0:.2} ± {1:.2}".format(xgb_acc_distrib.mean()[
-             0], xgb_acc_distrib.sem()[0]), xy=(0.08, 0), fontsize=10, color="k")
+plt.annotate("Average MSE: {0:.2} ± {1:.2}".format(xgb_acc_distrib.mean()[
+             0], xgb_acc_distrib.sem()[0]), xy=(0.04, 0), fontsize=8, color="k")
 
 plt.savefig("./plots/xgb_real_age_feat_imp.pdf", bbox_inches="tight")
 plt.savefig("./plots/xgb_real_age_feat_imp.png", bbox_inches="tight")
