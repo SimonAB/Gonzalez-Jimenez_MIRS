@@ -1,5 +1,7 @@
 # TODO
-- [ ] prediction of species and age
-- [ ] prediction of species
-- [ ] prediction of Arabiensis age
-- [ ] prediction of Anopheles age
+
+- [x] prediction of species and age
+- [x] prediction of species
+- [x] prediction of Arabiensis age
+- [x] prediction of Anopheles age
+- [ ] complete report

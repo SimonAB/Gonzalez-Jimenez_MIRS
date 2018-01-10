@@ -169,15 +169,15 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
 
 #%% import data
 df_real_age = pd.read_table("./mosquitoes_spectra (170623).dat", index_col="Real age")
-df_AG_real_age = df_real_age[df_real_age["Species"] == "AG"]
-df_AG_real_age = df_AG_real_age.iloc[:, 4:-1]
-df_AG_real_age.head()
+df_ar_real_age = df_real_age[df_real_age["Species"] == "AR"]
+df_ar_real_age = df_ar_real_age.iloc[:, 4:-1]
+df_ar_real_age.head()
 
-df_AG_real_age[df_AG_real_age.columns] = StandardScaler().fit_transform(df_AG_real_age[df_AG_real_age.columns].as_matrix())
-df_AG_real_age.head()
+df_ar_real_age[df_ar_real_age.columns] = StandardScaler().fit_transform(df_ar_real_age[df_ar_real_age.columns].as_matrix())
+df_ar_real_age.head()
 
 # %% Spot check classification models
-df = df_AG_real_age.copy()
+df = df_ar_real_age.copy()
 y = df.index
 X = df
 
@@ -225,14 +225,14 @@ plt.title("Worm burden")
 plt.xticks(rotation=90)
 plt.ylabel('Negative mean Squared Error')
 
-plt.savefig("./plots/spot_check_real_age.pdf", bbox_inches="tight")
-plt.savefig("./plots/spot_check_real_age.png", bbox_inches="tight")
+plt.savefig("./plots/spot_check_ar_real_age.pdf", bbox_inches="tight")
+plt.savefig("./plots/spot_check_ar_real_age.png", bbox_inches="tight")
 
 
 #%% ElasticNet
 
 # load data
-df = df_AG_real_age.copy()
+df = df_ar_real_age.copy()
 
 y = df.index
 X = df
@@ -329,10 +329,7 @@ print(rkf_coef[~rkf_coef.index.isin(["r2", "mse"])]
 print(rkf_coef[~rkf_coef.index.isin(["r2", "mse"])]
       [["coef mean", "coef sem"]].tail())
 
-
-#%% plot coeficients
-
-
+#%% plot coefficients
 rkf_coef = pd.read_csv("enet_real_age_repeatedCV_coef.csv", index_col="wavelength")
 rkf_coef.sort_values(by="coef mean", ascending=False, inplace=True)
 coef_plot_data = rkf_coef[~rkf_coef.index.isin(
@@ -357,13 +354,13 @@ f.set_xlabel("Elastic Net coefficient\n$MSE: {0:.3f} ± {1:.3f}$".format(
 
 f.set_ylabel("")
 
-plt.savefig("./plots/enet_coef_ag_real_age.pdf", bbox_inches="tight")
-plt.savefig("./plots/enet_coef_ag_real_age.png", bbox_inches="tight")
+plt.savefig("./plots/enet_coef_ar_real_age.pdf", bbox_inches="tight")
+plt.savefig("./plots/enet_coef_ar_real_age.png", bbox_inches="tight")
 
 # %% XGBRegressor
 
 # Load data
-df = df_AG_real_age.copy()
+df = df_ar_real_age.copy()
 
 y = df.index
 X = df
@@ -426,7 +423,7 @@ for train_index, test_index in rkf.split(X, y):
     y_pred = best_model.predict(X_test)
 
     local_feat_impces = pd.DataFrame(
-        best_model.feature_importances_, index=df_AG_real_age.columns).sort_values(by=0, ascending=False)
+        best_model.feature_importances_, index=df_ar_real_age.columns).sort_values(by=0, ascending=False)
 
     local_rkf_results = pd.DataFrame([("Accuracy", mean_squared_error(y_test, y_pred)), ("params", str(CV_result.best_params_)), (
         "seed", best_model.seed), ("TRAIN", str(train_index)), ("TEST", str(test_index)),  ("Feature importances", local_feat_impces.to_dict())]).T
@@ -438,19 +435,19 @@ for train_index, test_index in rkf.split(X, y):
 
 
 # Results
-rkf_results.to_csv("xgb_ag_real_age_repeatedCV_record.csv", index=False)
-rkf_results = pd.read_csv("xgb_ag_real_age_repeatedCV_record.csv")
+rkf_results.to_csv("xgb_ar_real_age_repeatedCV_record.csv", index=False)
+rkf_results = pd.read_csv("xgb_ar_real_age_repeatedCV_record.csv")
 
 
 # Accuracy distribution
 xgb_acc_distrib = rkf_results["Accuracy"]
 xgb_acc_distrib.columns = ["Accuracy"]
-xgb_acc_distrib.to_csv("xgb_ag_real_age_acc_distrib.csv", header=True, index=False)
+xgb_acc_distrib.to_csv("xgb_ar_real_age_acc_distrib.csv", header=True, index=False)
 
 # %% Plot Feature Importances
 
-rskf_results = pd.read_csv("xgb_ag_real_age_repeatedCV_record.csv")
-xgb_acc_distrib = pd.read_csv("xgb_ag_real_age_acc_distrib.csv")
+rskf_results = pd.read_csv("xgb_ar_real_age_repeatedCV_record.csv")
+xgb_acc_distrib = pd.read_csv("xgb_ar_real_age_acc_distrib.csv")
 
 all_featimp = pd.DataFrame(ast.literal_eval(
     rskf_results["Feature importances"][0]))
@@ -479,8 +476,8 @@ plt.axvline(x=featimp_global_mean, color="r", ls="--", dash_capstyle="butt")
 sns.despine()
 
 # Add mean accuracy of best models to plots
-plt.annotate("Average MSE: {0:.2} ± {1:.2}".format(xgb_acc_distrib.mean()[
-             0], xgb_acc_distrib.sem()[0]), xy=(0.04, 0), fontsize=8, color="k")
+plt.annotate("Average MSE:\n{0:.2} ± {1:.2}".format(xgb_acc_distrib.mean()[
+             0], xgb_acc_distrib.sem()[0]), xy=(0.07, 0), fontsize=8, color="k")
 
-plt.savefig("./plots/xgb_ag_real_age_feat_imp.pdf", bbox_inches="tight")
-plt.savefig("./plots/xgb_ag_real_age_feat_imp.png", bbox_inches="tight")
+plt.savefig("./plots/xgb_ar_real_age_feat_imp.pdf", bbox_inches="tight")
+plt.savefig("./plots/xgb_ar_real_age_feat_imp.png", bbox_inches="tight")

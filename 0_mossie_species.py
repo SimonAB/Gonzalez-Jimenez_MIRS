@@ -478,7 +478,7 @@ plt.savefig("./plots/xgb_sp_acc_distrib.pdf", bbox_inches="tight")
 plt.savefig("./plots/xgb_sp_acc_distrib.png", bbox_inches="tight")
 
 #%% plot per class distribution
-class_names = y.sort_values().unique()
+class_names = df_species.index.sort_values().unique()
 xgb_sp_per_class_acc_distrib = pd.DataFrame(rskf_per_class_results, columns=class_names)
 xgb_sp_per_class_acc_distrib.dropna().to_csv("./results/xgb_sp_per_class_acc_distrib.csv")
 xgb_sp_per_class_acc_distrib = pd.read_csv("./results/xgb_sp_per_class_acc_distrib.csv", index_col=0)
@@ -530,16 +530,9 @@ plt.axvspan(xmin=0, xmax=featimp_global_mean+3*featimp_global_sem,facecolor='r',
 plt.axvline(x=featimp_global_mean, color="r", ls="--", dash_capstyle="butt")
 sns.despine()
 
-# fig.set_yticklabels([
-#     "CD8 T cells (# in thymus)",
-#     "MEP cells (# in bone marrow)",
-#     "Erythroid Ter119 cells (# in bone marrow)",
-#     "Memory CD4 T cells (% PBMC)",
-#     "Memory T cells (% PBMC)",
-#     "Memory T cells (% spleen)",
-#     "Naive T cells (% spleen)",
-#     "Naive CD4 T cells (% spleen)",
-#     ])
+# Add mean accuracy of best models to plots
+plt.annotate("Average MSE:\n{0:.3f} ± {1:.3f}".format(xgb_sp_acc_distrib.mean()[
+             0], xgb_sp_acc_distrib.sem()[0]), xy=(0.06, 0), fontsize=8, color="k")
 
 plt.savefig("./plots/xgb_sp_feat_imp.pdf", bbox_inches="tight")
 plt.savefig("./plots/xgb_sp_feat_imp.png", bbox_inches="tight")
