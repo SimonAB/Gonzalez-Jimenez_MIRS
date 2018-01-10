@@ -168,9 +168,9 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
     plt.ylabel('Feature Importance Score')
 
 #%% import data
-df_real_age = pd.read_table("./mosquitoes_spectra (170623).dat", index_col="Real age")
+df_real_age = pd.read_table("./mosquitoes_data (2018).dat", index_col="Age")
 df_AG_real_age = df_real_age[df_real_age["Species"] == "AG"]
-df_AG_real_age = df_AG_real_age.iloc[:, 4:-1]
+df_AG_real_age = df_AG_real_age.iloc[:, 3:-1]
 df_AG_real_age.head()
 
 df_AG_real_age[df_AG_real_age.columns] = StandardScaler().fit_transform(df_AG_real_age[df_AG_real_age.columns].as_matrix())
