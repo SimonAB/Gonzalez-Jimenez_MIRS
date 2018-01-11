@@ -77,3 +77,7 @@ kfold = KFold(n_splits=10, random_state=seed)
 results = cross_val_score(pipeline, X, y, cv=kfold)
 # results = cross_val_score(estimator, X, y, cv=kfold)
 print("MSE: %.2f ± %.2f" % (results.mean(), results.std()))
+'''
+MSE: -19.18 ± 14.42
+Which is less performant than elastic nets.
+'''
