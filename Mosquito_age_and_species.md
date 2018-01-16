@@ -1,8 +1,6 @@
-Predicting both age and species of *Anopheles gambiae* and *Anopheles arabiensis* from mid-infrared spectra
-===========================================================================================================
+# Predicting both age and species of *Anopheles gambiae* and *Anopheles arabiensis* from mid-infrared spectra
 
-Predicting SPECIES
-------------------
+## Predicting SPECIES
 
 ### Spot-checking baseline performance of various algorithms
 
@@ -26,13 +24,55 @@ Ranked by decreasing importance:
 
 ![Feature importances](plots/xgb_sp_feat_imp.png)
 
-Predicting AGE
-==============
+## Predicting AGE
 
-Predicting age for *A. gambiae*, as classification
---------------------------------------------------
+### Predicting age for *A. gambiae*, as regression
 
-### Spot-checking baseline performance of various algorithms
+#### Spot-checking baseline performance of various algorithms
+
+With output category consisting of ages as continuous variable, Elastic Nets and Logistic regression achieved the best prediction accuracy at baseline settings:
+
+![Spotchecking *A. gambiae* age](plots/spot_check_real_age.png)
+
+#### Optimising Elastic Nets
+
+Elastic Nets achieved on average an MSE of 14.7 ± 0.3.
+
+![Coefs](plots/enet_coef_ag_real_age.png)
+
+#### Optimising XGBoost
+
+XGBoost models achieved on average an MSE of 15.0 ± 0.2
+
+![XGB featrure importances](./plots/xgb_ag_real_age_feat_imp.png)
+
+
+### Predicting age of *Anopheles arabiensis* as regression
+
+#### Spot-checking baseline performance of various algorithms
+
+With output category consisting of ages as continuous variable, Elastic Nets and Logistic regression achieved the best prediction accuracy at baseline settings:
+
+![Spotchecking *A. arabiensis* age](plots/spot_check_ar_real_age.png)
+
+#### Optimising Elastic Nets
+
+Elastic Nets achieved on average an MSE of 14.72 ± 0.26.
+
+![Coefs](plots/enet_coef_ar_real_age.png)
+
+#### Optimising XGBoost
+
+XGBoost models achieved on average an MSE of 13 ± 0.2.
+
+![XGB feature importances](./plots/xgb_ar_real_age_feat_imp.png)
+
+
+## Classification approach
+
+### Predicting age for *A. gambiae*, as classification
+
+#### Spot-checking baseline performance of various algorithms
 
 With output category consisting of ages [1, 3, 5, 7, 9, old], XGB achieved the best prediction accuracy at baseline settings:
 
@@ -40,7 +80,7 @@ With output category consisting of ages [1, 3, 5, 7, 9, old], XGB achieved the b
 
 Logistic regression provides the most accurate prediction.
 
-### Optimising Logistic regression models
+#### Optimising Logistic regression models
 
 #### Per class prediction accuracy
 
@@ -52,35 +92,14 @@ Ranked by decreasing importance:
 
 ![Feature importances](plots/lr_AG_age_feat_imp.png)
 
-Predicting age for *A. gambiae*, as regression
-----------------------------------------------
-
-### Spot-checking baseline performance of various algorithms
-
-With output category consisting of ages as continuous variable, Elastic Nets and Logistic regression achieved the best prediction accuracy at baseline settings:
-
-![Spotchecking age](plots/spot_check_real_age.png)
-
-### Optimising Elastic Nets
-
-Elastic Nets achieved on average an MSE of 14.7 ± 0.3.
-
-![Coefs](plots/enet_coef_ag_real_age.png)
-
-### Optimising XGBoost
-
-XGBoost models achieved on average an MSE of 15.0 ± 0.2
-
-![XGB featrure importances](./plots/xgb_ag_real_age_feat_imp.png)
-
-Predicting age of AR, as classification
----------------------------------------
+### Predicting age of AR, as classification
 
 #### Spot-checking baseline performance of various algorithms
 
 With output category consisting of ages [1, 3, 5, 7, 9, old], XGB achieved the best prediction accuracy at baseline settings:
 
 ![Spotchecking age](plots/spot_check_age_rus_AR.png)
+
 
 #### After tuning XGBoost parameters
 
@@ -94,6 +113,4 @@ Note: the confursion matrix shows the output of one model only. To get a represe
 
 Ranked by decreasing importance (alternative way ofrepresenting these data):
 
-![Feature importances](plots/xgb_feat_imp_age_rus_AR.png)
-
-Three wavelengths stood out as being particularly important to the prediction: '1900.76462', '1745.50175', '3855.53371'
+![Feature importances](plots/xgb_ag_real_age_feat_imp.png)

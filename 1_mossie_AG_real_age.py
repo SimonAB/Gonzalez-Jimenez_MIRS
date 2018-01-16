@@ -193,7 +193,7 @@ models = []
 # models.append(("LR", LinearRegression()))
 models.append(("EN", ElasticNetCV()))
 # models.append(("SGD", SGDRegressor()))
-models.append(("LDA", LinearDiscriminantAnalysis()))
+# models.append(("LDA", LinearDiscriminantAnalysis()))
 models.append(("KNNR", KNeighborsRegressor()))
 # models.append(("CART", DecisionTreeRegressor()))
 models.append(("RF", RandomForestRegressor()))
@@ -221,7 +221,7 @@ for name, model in models:
 g = plt.figure(figsize=(2.4, 3))
 sns.boxplot(x=names, y=results)
 sns.despine(offset=10, trim=True)
-plt.title("Worm burden")
+plt.title("Algorithm comparison")
 plt.xticks(rotation=90)
 plt.ylabel('Negative mean Squared Error')
 
@@ -350,7 +350,7 @@ f = plt.figure(figsize=(4, 8))
 f = sns.barplot(data=coef_plot_data, orient="h", palette="coolwarm")
 
 plt.xticks(np.arange(np.round(min(rkf_coef["coef mean"][~rkf_coef.index.isin(["r2", "mse", "nw_counts", "log_real_age"])]), decimals=3), np.round(
-    max(rkf_coef["coef mean"][~rkf_coef.index.isin(["r2", "mse", "nw_counts", "log_real_age"])]), decimals=3), 0.02), fontsize=10)
+    max(rkf_coef["coef mean"][~rkf_coef.index.isin(["r2", "mse", "nw_counts", "log_real_age"])]), decimals=3), 2), fontsize=10)
 
 f.set_xlabel("Elastic Net coefficient\n$MSE: {0:.3f} ± {1:.3f}$".format(
     rkf_coef.loc["mse", ["coef mean"]][0], rkf_coef.loc["mse", ["coef sem"]][0]), weight="bold")
