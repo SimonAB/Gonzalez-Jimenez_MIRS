@@ -1,6 +1,6 @@
 # Import modules
 
-```python
+#%%
 import os
 import glob
 import re
@@ -8,6 +8,7 @@ import ast
 from time import time
 from tqdm import tqdm
 from collections import Counter
+
 
 import numpy as np
 import pandas as pd
@@ -71,7 +72,7 @@ from imblearn.under_sampling import RandomUnderSampler
 from imblearn.ensemble import EasyEnsemble
 
 import matplotlib.pyplot as plt
-%matplotlib inline
+# %matplotlib inline
 
 
 import seaborn as sns
@@ -283,7 +284,7 @@ df_species_age[df_species_age.columns] = StandardScaler().fit_transform(df_speci
 
 
 
-```
+
 
 
 
@@ -292,7 +293,7 @@ df_species_age[df_species_age.columns] = StandardScaler().fit_transform(df_speci
 #########################################
 
 # Spot-checking classification approaches
-```python
+#%%
 
 # determine size of data to use
 X = df_species.astype(float)
@@ -342,10 +343,10 @@ for name, model in models:
         name, cv_results.mean(), cv_results.std())
     print(msg)
 
-```
+
 
 # plot
-```python
+#%%
 sns.boxplot(x=names, y=results)
 sns.despine(offset=10, trim=True)
 plt.title("Predicting Mosquito Species", weight="bold")
@@ -355,11 +356,11 @@ plt.savefig("./plots/spot_check_species_rus.pdf", bbox_inches="tight")
 plt.savefig("./plots/spot_check_species_rus.png", bbox_inches="tight")
 
 
-```
+
 
 # Optimising XGBoost
 
-```python
+#%%
 
 # Parameter search
 
@@ -499,11 +500,11 @@ plt.ylabel("Prediction accuracy\n ({0:.2f} ± {1:.2f})".format(xgb_sp_per_class_
 plt.savefig("./plots/xgb_sp_per_class_acc_distrib.pdf", bbox_inches="tight")
 plt.savefig("./plots/xgb_sp_per_class_acc_distrib.png", bbox_inches="tight")
 
-```
+
 
 # Feature Importances
 
-```python
+#%%
 ## make this into bar with error bars across all best models
 
 rskf_results = pd.read_csv("./results/xgb_sp_repeatedCV_record.csv")
@@ -547,7 +548,7 @@ sns.despine()
 plt.savefig("./plots/xgb_sp_feat_imp.pdf", bbox_inches="tight")
 plt.savefig("./plots/xgb_sp_feat_imp.png", bbox_inches="tight")
 
-```
+
 
 
 #########################################
@@ -555,7 +556,7 @@ plt.savefig("./plots/xgb_sp_feat_imp.png", bbox_inches="tight")
 #########################################
 
 # Spot-checking classification approaches
-```python
+#%%
 
 # determine size of data to use
 X = df_age_AG.astype(float)
@@ -602,10 +603,10 @@ for name, model in models:
         name, cv_results.mean(), cv_results.std())
     print(msg)
 
-```
+
 # plot
 
-```python
+#%%
 sns.boxplot(x=names, y=results)
 sns.despine(offset=10, trim=True)
 plt.title("Predicting AG age", weight="bold")
@@ -614,12 +615,12 @@ plt.ylabel("Accuracy (median, quartiles, range)")
 plt.savefig("./plots/spot_check_age_rus_AG.pdf", bbox_inches="tight")
 plt.savefig("./plots/spot_check_age_rus_AG.png", bbox_inches="tight")
 
-```
+
 
 
 ## Logistic regression
 
-```python
+#%%
 # features & labels
 X = df_age_AG.values
 y = df_age_AG.index
@@ -751,13 +752,13 @@ plt.xticks(rotation=0, ha="right")
 plt.ylabel("Prediction accuracy")
 plt.savefig("./plots/lr_AG_age_per_class_acc_distrib.pdf", bbox_inches="tight")
 plt.savefig("./plots/lr_AG_age_per_class_acc_distrib.png", bbox_inches="tight")
-```
+
 
 # LR coeffients
 
-```python
+#%%
 # ....
-```
+
 
 
 
@@ -767,7 +768,7 @@ plt.savefig("./plots/lr_AG_age_per_class_acc_distrib.png", bbox_inches="tight")
 #########################################
 
 # Spot-checking classification approaches
-```python
+#%%
 
 # determine size of data to use
 X = df_age_AR.astype(float)
@@ -814,10 +815,10 @@ for name, model in models:
         name, cv_results.mean(), cv_results.std())
     print(msg)
 
-```
+
 # plot
 
-```python
+#%%
 sns.boxplot(x=names, y=results)
 sns.despine(offset=10, trim=True)
 plt.xticks(rotation=30)
@@ -825,11 +826,11 @@ plt.ylabel("Accuracy (median, quartiles, range)")
 plt.savefig("./plots/spot_check_age_rus_AR.pdf", bbox_inches="tight")
 plt.savefig("./plots/spot_check_age_rus_AR.png", bbox_inches="tight")
 
-```
+
 
 # BIG LOOP
 
-```python
+#%%
 
 # Parameter search
 
@@ -966,7 +967,7 @@ plt.ylabel("Prediction accuracy")
 plt.savefig("./plots/xgb_AR_age_per_class_acc_distrib.pdf", bbox_inches="tight")
 plt.savefig("./plots/xgb_AR_age_per_class_acc_distrib.png", bbox_inches="tight")
 
-```
+
 
 
 ######################################################################
@@ -974,7 +975,7 @@ plt.savefig("./plots/xgb_AR_age_per_class_acc_distrib.png", bbox_inches="tight")
 ######################################################################
 
 # Spot-checking classification approaches
-```python
+#%%
 
 # determine size of data to use
 X = df_age.astype(float)
@@ -1024,10 +1025,10 @@ for name, model in models:
         name, cv_results.mean(), cv_results.std())
     print(msg)
 
-```
+
 # plot
 
-```python
+#%%
 sns.boxplot(x=names, y=results)
 sns.despine(offset=10, trim=True)
 plt.xticks(rotation=30)
@@ -1035,11 +1036,11 @@ plt.ylabel("Accuracy (median, quartiles, range)")
 plt.savefig("./plots/spot_check_age_rus_AGandAR.pdf", bbox_inches="tight")
 plt.savefig("./plots/spot_check_age_rus_AGandAR.png", bbox_inches="tight")
 
-```
+
 
 # BIG LOOP
 
-```python
+#%%
 
 # Parameter search
 
@@ -1178,14 +1179,14 @@ plt.savefig("./plots/xgb_age_per_class_acc_distrib.png", bbox_inches="tight")
 
 
 
-```
+
 
 #########################################
 # PREDICTING AGE AND SPECIES
 #########################################
 
 # Spot-checking classification approaches
-```python
+#%%
 
 # determine size of data to use
 X = df_species_age.astype(float)
@@ -1240,10 +1241,10 @@ for name, model in models:
         name, cv_results.mean(), cv_results.std())
     print(msg)
 
-```
+
 
 # plot
-```python
+#%%
 sns.boxplot(x=names, y=results)
 sns.despine(offset=10, trim=True)
 plt.xticks(rotation=30)
@@ -1251,12 +1252,12 @@ plt.ylabel("Accuracy (median, quartiles, range)")
 plt.savefig("./plots/spot_check_species_age_rus.pdf", bbox_inches="tight")
 plt.savefig("./plots/spot_check_species_age_rus.png", bbox_inches="tight")
 
-```
+
 
 
 # Big loop
 
-```python
+#%%
 # determine size of data to use
 X = df_species_age.values
 y = df_species_age.index
@@ -1392,7 +1393,7 @@ plt.savefig("./plots/xgb_per_class_acc_distrib.png", bbox_inches="tight")
 
 
 
-```
+
 ######################################################################
 # PREDICTING REAL AGE OF BOTH SPECIES (all feeds)
 ######################################################################
@@ -1400,7 +1401,7 @@ plt.savefig("./plots/xgb_per_class_acc_distrib.png", bbox_inches="tight")
 
 # Spot-checking
 
-```python
+#%%
 X = df_real_age
 y = df_real_age.index
 
@@ -1450,10 +1451,10 @@ plt.ylabel('Negative mean Squared Error')
 
 plt.savefig("./plots/spot_check_real_age.pdf", bbox_inches="tight")
 plt.savefig("./plots/spot_check_real_age.png", bbox_inches="tight")
-```
+
 
 ## search best parameters
-```python
+#%%
 # load data
 X = df_real_age.values
 y = df_real_age.index
@@ -1532,11 +1533,11 @@ xgb_acc_distrib = rkf_results["Accuracy"]
 xgb_acc_distrib.columns=["Accuracy"]
 xgb_acc_distrib.to_csv("xgb_real_age_acc_distrib.csv", header=True, index=False)
 
-```
+
 
 # Feature Importances
 
-```python
+#%%
 rskf_results = pd.read_csv("xgb_real_age_repeatedCV_record.csv")
 xgb_acc_distrib = pd.read_csv("xgb_real_age_acc_distrib.csv")
 
@@ -1571,7 +1572,7 @@ plt.annotate("Average MSE: {0:.2} ± {1:.2}".format(xgb_acc_distrib.mean()[0], x
 plt.savefig("./plots/xgb_real_age_feat_imp.pdf", bbox_inches="tight")
 plt.savefig("./plots/xgb_real_age_feat_imp.png", bbox_inches="tight")
 
-```
+
 
 
 #########################################
@@ -1580,7 +1581,7 @@ plt.savefig("./plots/xgb_real_age_feat_imp.png", bbox_inches="tight")
 
 # Spot-checking
 
-```python
+#%%
 X = df_real_age_AG
 y = df_real_age_AG.index
 # cross validation
@@ -1630,11 +1631,11 @@ plt.ylabel('Negative mean Squared Error')
 
 plt.savefig("./plots/spot_check_real_age_AG.png", bbox_inches="tight")
 plt.savefig("./plots/spot_check_real_age_AG.pdf", bbox_inches="tight")
-```
+
 
 ## Elastic Net optimisation
 
-```python
+#%%
 # load data
 X = df_real_age_AG
 y = df_real_age_AG.index
@@ -1721,7 +1722,7 @@ print(rkf_coef[~rkf_coef.index.isin(["r2", "mse"])][["coef mean", "coef sem"]].h
 print(rkf_coef[~rkf_coef.index.isin(["r2", "mse"])][["coef mean", "coef sem"]].tail())
 
 
-```
+
 Intercept: 9.92 ± 0.195
 Average mse: 14.11 ± 0.18
 
@@ -1742,7 +1743,7 @@ wavelength
 
 ## plot coeficients
 
-```python
+#%%
 rkf_coef = pd.read_csv("enet_AG_age_repeatedCV_coef.csv", index_col="wavelength")
 rkf_coef.sort_values(by="coef mean", ascending=False, inplace=True)
 coef_plot_data = rkf_coef[~rkf_coef.index.isin(["r2", "mse", "AG_age", "log_nw"])].copy()
@@ -1766,7 +1767,7 @@ f.set_ylabel("")
 plt.savefig("./plots/as_enet_coef_immune_nw.png", bbox_inches="tight")
 plt.savefig("./plots/as_enet_coef_immune_nw.pdf", bbox_inches="tight")
 
-```
+
 
 
 #########################################
@@ -1775,7 +1776,7 @@ plt.savefig("./plots/as_enet_coef_immune_nw.pdf", bbox_inches="tight")
 
 # Spot-checking
 
-```python
+#%%
 X = df_real_age_AR
 y = df_real_age_AR.index
 
@@ -1825,10 +1826,10 @@ plt.ylabel('Negative mean Squared Error')
 
 plt.savefig("./plots/spot_check_real_age_AR.pdf", bbox_inches="tight")
 plt.savefig("./plots/spot_check_real_age_AR.png", bbox_inches="tight")
-```
+
 
 ## search best parameters
-```python
+#%%
 # load data
 X = df_real_age_AR.values
 y = df_real_age_AR.index
@@ -1907,11 +1908,11 @@ xgb_acc_distrib = rkf_results["Accuracy"]
 xgb_acc_distrib.columns=["Accuracy"]
 xgb_acc_distrib.to_csv("xgb_real_age_AR_acc_distrib.csv", header=True, index=False)
 
-```
+
 
 # Feature Importances
 
-```python
+#%%
 rskf_results = pd.read_csv("xgb_real_age_AR_repeatedCV_record.csv")
 xgb_acc_distrib = pd.read_csv("xgb_real_age_AR_acc_distrib.csv")
 
@@ -1946,4 +1947,4 @@ plt.annotate("Average MSE: {0:.2} ± {1:.2}".format(xgb_acc_distrib.mean()[0], x
 plt.savefig("./plots/xgb_real_age_AR_feat_imp.pdf", bbox_inches="tight")
 plt.savefig("./plots/xgb_real_age_AR_feat_imp.png", bbox_inches="tight")
 
-```
+
