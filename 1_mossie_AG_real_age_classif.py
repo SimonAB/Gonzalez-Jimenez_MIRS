@@ -220,7 +220,7 @@ for name, model in models:
 
 # %% plot
 
-sns.boxplot(x=names, y=results)
+sns.boxplot(x=names, y=results, whis=10)
 sns.despine(offset=10, trim=True)
 plt.title("Predicting AG age", weight="bold")
 plt.xticks(rotation=30)
