@@ -13,5 +13,6 @@
 - [ ] merge days in output if I cannot disentangle them: use mean of 2 or 3 consequtive days to match other species
 - [ ] send matrix of prediction probabilities and confusion matrices.
 - [ ] use 'wild mossie' dataset to test models trained on lab mossies.
+- [ ] fix LR for species classification
 
 
