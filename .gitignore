@@ -1,3 +1,4 @@
 .vscode/
 .~lock*
 .DS_Store
+*.icloud
