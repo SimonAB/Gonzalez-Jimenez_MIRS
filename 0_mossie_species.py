@@ -252,8 +252,7 @@ df_sp_food = df_full.copy()
 df_sp_food.index = df_sp_food["Species"]
 df_sp_BF = df_sp_food[df_sp_food["Status"] == "BF"].iloc[:, 5:]
 df_sp_SF = df_sp_food[df_sp_food["Status"] == "SF"].iloc[:, 5:]
-df_sp_GR = df_sp_food[df_sp_food["Status"] ==
-                      "GR"].iloc[:, 5:]  # select species data
+df_sp_GR = df_sp_food[df_sp_food["Status"] == "GR"].iloc[:, 5:] 
 
 # transform species data
 for df in [df_sp_BF, df_sp_SF, df_sp_GR]:

@@ -169,6 +169,8 @@ df_ar_real_age.head()
 df_ar_real_age[df_ar_real_age.columns] = StandardScaler().fit_transform(df_ar_real_age[df_ar_real_age.columns].as_matrix())
 df_ar_real_age.head()
 
+df_ar_real_age.index.unique()
+
 # %% Spot check classification models
 df = df_ar_real_age.copy()
 y = df.index

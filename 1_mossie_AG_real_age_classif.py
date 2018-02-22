@@ -35,7 +35,7 @@ from sklearn.preprocessing import maxabs_scale
 
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.linear_model import SGDClassifier
-from sklearn.svm import SVR
+from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.tree import ExtraTreeClassifier
@@ -171,8 +171,11 @@ df_AG_real_age.groupby("Age").mean()
 
 Counter(df_AG_real_age.index)
 
+df_AG_real_age_elim = df_AG_real_age.loc[[1, 3, 5, 7, 9, 11, 13, 15, 17], :]
+Counter(df_AG_real_age_elim.index)
+
 # %% Spot check regression models
-df = df_AG_real_age.copy()
+df = df_AG_real_age_elim.copy()
 y = df.index
 X = df
 
@@ -187,12 +190,12 @@ num_splits = 10
 
 models = []
 models.append(("KNN", KNeighborsClassifier()))
-# models.append(("SGD", SGDClassifier()))
+models.append(("SGD", SGDClassifier()))
 # models.append(("LDA", LinearDiscriminantAnalysis(random_state=seed)))
 models.append(("LR", LogisticRegressionCV()))
 # models.append(("CART", DecisionTreeClassifier()))
 models.append(("SVM", SVC()))
-models.append(("NB", GaussianNB()))
+# models.append(("NB", GaussianNB()))
 models.append(("RF", RandomForestClassifier()))
 # models.append(("ET", ExtraTreeClassifier()))
 models.append(("XGB", XGBClassifier()))
@@ -256,7 +259,7 @@ classifier = LogisticRegressionCV(Cs=10,
                                   max_iter=100,
                                   class_weight="balanced",
                                   n_jobs=-1,
-                                  verbose=0,
+                                  verbose=1,
                                   refit=True,
                                   intercept_scaling=1.0,
                                   multi_class="ovr",
