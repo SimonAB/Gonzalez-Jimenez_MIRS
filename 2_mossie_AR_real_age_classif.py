@@ -36,6 +36,7 @@ from sklearn.preprocessing import maxabs_scale
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import SVR
+from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.tree import ExtraTreeClassifier
@@ -216,7 +217,7 @@ models.append(("KNN", KNeighborsClassifier()))
 models.append(("LR", LogisticRegressionCV()))
 # models.append(("CART", DecisionTreeClassifier()))
 models.append(("SVM", SVC()))
-models.append(("NB", GaussianNB()))
+# models.append(("NB", GaussianNB()))
 models.append(("RF", RandomForestClassifier()))
 # models.append(("ET", ExtraTreeClassifier()))
 models.append(("XGB", XGBClassifier()))

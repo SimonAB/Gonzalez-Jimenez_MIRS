@@ -36,6 +36,7 @@ from sklearn.preprocessing import maxabs_scale
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import SVR
+from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.tree import ExtraTreeClassifier
@@ -198,7 +199,7 @@ df_ag_food = df_full.copy()
 df_ag_food.index = df_ag_food["Age"]
 df_ag_food_elim = df_ag_food.loc[[1, 3, 5, 7, 9, 11, 13, 15, 17], :]
 
-df_ag_SF = df_ag_food_elim[df_ag_food_elim["Status"] == "SF"].iloc[:, 4:]
+df_ag_BF = df_ag_food_elim[df_ag_food_elim["Status"] == "BF"].iloc[:, 4:]
 df_ag_SF = df_ag_food_elim[df_ag_food_elim["Status"] == "SF"].iloc[:, 4:]
 df_ag_GR = df_ag_food_elim[df_ag_food_elim["Status"] == "GR"].iloc[:, 4:]
 
@@ -229,7 +230,7 @@ models.append(("KNN", KNeighborsClassifier()))
 models.append(("LR", LogisticRegressionCV()))
 # models.append(("CART", DecisionTreeClassifier()))
 models.append(("SVM", SVC()))
-models.append(("NB", GaussianNB()))
+# models.append(("NB", GaussianNB()))
 models.append(("RF", RandomForestClassifier()))
 # models.append(("ET", ExtraTreeClassifier()))
 models.append(("XGB", XGBClassifier()))
