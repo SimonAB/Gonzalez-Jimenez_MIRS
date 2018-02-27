@@ -202,6 +202,7 @@ df_ag_food_elim = df_ag_food.loc[[1, 3, 5, 7, 9, 11, 13, 15, 17], :]
 df_ag_BF = df_ag_food_elim[df_ag_food_elim["Status"] == "BF"].iloc[:, 4:]
 df_ag_SF = df_ag_food_elim[df_ag_food_elim["Status"] == "SF"].iloc[:, 4:]
 df_ag_GR = df_ag_food_elim[df_ag_food_elim["Status"] == "GR"].iloc[:, 4:]
+df_ag_SF_GR = df_ag_food_elim[df_ag_food_elim["Status"] == "GR"].iloc[:, 4:]
 
 # transform species data
 for df in [df_ag_SF, df_ag_SF, df_ag_GR]:

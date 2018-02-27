@@ -15,4 +15,11 @@
 - [ ] use 'wild mossie' dataset to test models trained on lab mossies.
 - [ ] fix LR for species classification
 
+## Meeting 27 Feb 2018
 
+- [ ] Mario and Francesco will double check the dataset (during the meeting we observed a potentiall error in a few labeling)
+- [ ] use new dataset including D3 AG 
+- [ ] Construct validation set with missing days
+- [ ] combine SF+GR for training & validation
+- [ ] if not look good for old mossies: [11; 15] 
+- [ ] Mafalda and Simon will work on figure 4 using our best model
