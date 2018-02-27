@@ -179,8 +179,9 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
 
 #%% load data 
 
+
 # import full dataset
-df_full = pd.read_table("./mosquitoes_spectra (170623).dat")
+df_full = pd.read_table("mosquitoes_spectra (180227).dat")
 
 df_full.head()
 # select species data
