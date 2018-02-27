@@ -165,11 +165,11 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
 
 
 # import full dataset
-df_full = pd.read_table("./mosquitoes_spectra (170623).dat")
+df_full = pd.read_table("mosquitoes_spectra (180227).dat")
 
 df_full.head()
 
-df_real_age = pd.read_table("./mosquitoes_spectra (170623).dat", index_col="Real age")
+df_real_age = pd.read_table("mosquitoes_spectra (180227).dat", index_col="Real age")
 df_ar_real_age = df_real_age[df_real_age["Species"] == "AR"]
 df_ar_real_age = df_ar_real_age.iloc[:, 4:-1]
 df_ar_real_age.head()
