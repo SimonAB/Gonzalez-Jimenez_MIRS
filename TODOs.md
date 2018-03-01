@@ -18,9 +18,10 @@
 ## Meeting 27 Feb 2018
 
 - [x] Mario and Francesco will double check the dataset (during the meeting we observed a potential error in a few labelling)
-- [ ] use new dataset including D3 AG 
-- [ ] Construct validation set with missing days
+- [x] use new dataset including D3 AG 
 - [ ] combine SF+GR for training & validation
+- [ ] Construct validation set 1 with missing days
+- [ ] Construct validation set 2 with population's age structure
 - [ ] if not look good for old mossies: [11; 15] 
 - [ ] use average CMs over 10 top models
 - [ ] Mafalda and Simon will work on figure 4 using our best model
