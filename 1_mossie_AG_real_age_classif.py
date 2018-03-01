@@ -176,16 +176,33 @@ df_full = pd.read_table("mosquitoes_spectra (180227).dat")
 
 df_full.head()
 
-df_real_age = pd.read_table("mosquitoes_spectra (180227).dat", index_col="Real age")
+
+df_real_age = pd.read_table(".mosquitoes_spectra (180227).dat", index_col="Age")
 df_real_age_elim = df_real_age.loc[[1, 3, 5, 7, 9, 11, 13, 15, 17], :]
 
 df_ag_real_age = df_real_age_elim[df_real_age_elim["Species"] == "AG"]
+df_ag_real_age = df_ag_real_age.iloc[:, 3:-1]
+df_ag_real_age.head()
+
+df_ag_real_age[df_ag_real_age.columns] = StandardScaler().fit_transform(
+    df_ag_real_age[df_ag_real_age.columns].as_matrix())
+df_ag_real_age.head()
+
+df_ag_real_age.index.unique()
 
 # feed
-df_ag_BF = df_ag_real_age[df_ag_food_elim["Status"] == "BF"].iloc[:, 4:]
-df_ag_SF = df_ag_real_age[df_ag_real_age["Status"] == "SF"].iloc[:, 4:]
-df_ag_GR = df_ag_real_age[df_ag_real_age["Status"] == "GR"].iloc[:, 4:]
-df_ag_SF_GR = df_ag_real_age[(df_ag_real_age["Status"] == "GR") | ( df_ag_real_age["Status"] == "SF")].iloc[:, 4:]
+df_all_food = df_full.copy()
+df_all_food.index = df_all_food["Status"]
+df_all_food = df_all_food.iloc[:, 4:]
+
+df_ag_food = df_full.copy()
+df_ag_food.index = df_ag_food["Age"]
+df_ag_food_elim = df_ag_food.loc[[1, 3, 5, 7, 9, 11, 13, 15, 17], :]
+
+df_ag_BF = df_ag_food_elim[df_ag_food_elim["Status"] == "BF"].iloc[:, 4:]
+df_ag_SF = df_ag_food_elim[df_ag_food_elim["Status"] == "SF"].iloc[:, 4:]
+df_ag_GR = df_ag_food_elim[df_ag_food_elim["Status"] == "GR"].iloc[:, 4:]
+df_ag_SF_GR = df_ag_food_elim[df_ag_food_elim["Status"] == "GR"].iloc[:, 4:]
 
 # transform species data
 for df in [df_ag_SF, df_ag_SF, df_ag_GR]:
@@ -422,166 +439,99 @@ plot_confusion_matrix(best_cm, classes=class_names)
 plt.savefig("./plots/lr_ag_age_cm.pdf", bbox_inches="tight")
 plt.savefig("./plots/lr_ag_age_cm.png", bbox_inches="tight")
 
-# %% XGBClassifier
+# %% XGBRegressor
 
 # Load data
 df = df_ag_real_age.copy()
 
 y = df.index
-X = df.values
+X = df
 Counter(y)
 
 # cross validation
-validation_size = 0.3
-num_splits = 5
-num_repeats = 2
-num_rounds = 5
-scoring = "accuracy"
+seed = 4
+validation_size = 0.30
+num_splits = 10
+num_repeats = 10
+scoring = "neg_mean_squared_error"
+kfold = KFold(n_splits=num_splits, random_state=seed)
 
-# preparing model
-model = XGBClassifier(nthread=1, seed=seed)
+# base algorithm settings
+regressor = XGBRegressor(nthread=1)
 
-# Grid search paramater space
-# colsample_bytree = [0.1, 0.3, 0.5, 0.8, 1]
-# learning_rate = [0.001, 0.01, 0.1]
-# max_depth = [6, 8, 10]
-# min_child_weight = [1, 3, 5, 7]
-# n_estimators = [50, 100, 300, 500]
+# define hyperparameter space to test
+## for troubleshooting:
+# max_depth = [2, 4]
+# min_child_weight = [3, 7]
+# learning_rate = [0.01, 0.1]
+# n_estimators = [5, 10, 20]
 
-# Mini Grid search paramater space
-colsample_bytree = [0.1, 1]
-learning_rate = [0.001, 0.01]
-max_depth = [6, 8]
-min_child_weight = [1, 3]
-n_estimators = [100, 300]
+# the real deal:
+max_depth = [2, 4, 6, 8]  # 4?
+min_child_weight = [1, 3, 5, 7]
+n_estimators = [5, 10, 15, 20, 25, 30]
+learning_rate = [0.0001, 0.001, 0.01, 0.1, 0.2]  # 0.1?
+colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
 
-parameters = {"colsample_bytree": colsample_bytree,
-              "learning_rate": learning_rate,
+
+parameters = {"max_depth": max_depth,
               "min_child_weight": min_child_weight,
+              "learning_rate": learning_rate,
               "n_estimators": n_estimators,
-              "max_depth": max_depth}
-
+              "colsample_bytree": colsample_bytree}
 
 # repeated random stratified splitting of dataset
-rskf = RepeatedStratifiedKFold(
-    n_splits=num_splits, n_repeats=num_repeats, random_state=seed)
+rkf = RepeatedKFold(n_splits=num_splits,
+                    n_repeats=num_repeats, random_state=seed)
 
 # prepare matrices of results
-rskf_results = pd.DataFrame()  # model parameters and global accuracy score
-rskf_per_class_results = []  # per class accuracy scores
-rskf_orphan_preds = pd.DataFrame()  # orphan predictions
-start = time()
+rkf_results = pd.DataFrame()  # model parameters and global accuracy score
+rkf_per_class_results = []  # per class accuracy scores
 
-for round in range(num_rounds):
-    seed = np.random.randint(0, 81470108)
+for train_index, test_index in rkf.split(X, y):
+    X_train, X_test = X.values[train_index], X.values[test_index]
+    y_train, y_test = y[train_index], y[test_index]
 
-    # under-sample over-represented classes
-    rus = RandomUnderSampler(random_state=seed)
-    X_resampled, y_resampled = rus.fit_sample(X, y)  # produces numpy arrays
+    # GRID SEARCH
+    gsCV = GridSearchCV(estimator=regressor, param_grid=parameters,
+                        scoring=scoring, cv=kfold, n_jobs=-1, verbose=1)
+    CV_result = gsCV.fit(X_train, y_train)
+    best_model = XGBRegressor(nthread=1, **CV_result.best_params_)
 
-    for train_index, test_index in rskf.split(X, y):
-        X_train, X_test = X[train_index], X[test_index]
-        y_train, y_test = y[train_index], y[test_index]
+    #fit model
+    best_model.fit(X_train, y_train)
 
-        # GRID SEARCH
-        # # grid search on each iteration
-        # start = time()
-        # gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
-        #                     scoring=scoring, cv=rskf, n_jobs=-1, verbose=1)
-        # CV_result = gsCV.fit(X_train, y_train)
-        # best_model = model(**CV_result.best_params_)
+    #test model
+    y_pred = best_model.predict(X_test)
 
-        # RANDOMSED GRID SEARCH
-        n_iter_search = 10
-        rsCV = RandomizedSearchCV(verbose=1,
-                                  estimator=model, param_distributions=parameters, n_iter=n_iter_search, cv=rskf, n_jobs=-1)
-        rsCV_result = rsCV.fit(X_train, y_train)
+    local_feat_impces = pd.DataFrame(
+        best_model.feature_importances_, index=df_ag_real_age.columns).sort_values(by=0, ascending=False)
 
-        best_model = XGBClassifier(
-            nthread=1, seed=seed, **rsCV_result.best_params_)
+    local_rkf_results = pd.DataFrame([("Accuracy", mean_squared_error(y_test, y_pred)), ("params", str(CV_result.best_params_)), (
+        "seed", best_model.seed), ("TRAIN", str(train_index)), ("TEST", str(test_index)),  ("Feature importances", local_feat_impces.to_dict())]).T
 
-        #fit model
-        best_model.fit(X_train, y_train)
+    # combine outputs
+    local_rkf_results.columns = local_rkf_results.iloc[0]
+    local_rkf_results = local_rkf_results[1:]
+    rkf_results = rkf_results.append(local_rkf_results)
 
-        #test model
-        y_pred = best_model.predict(
-            np.delete(X_resampled, train_index, axis=0))
-        y_test = np.delete(y_resampled, train_index, axis=0)
-        local_cm = confusion_matrix(y_test, y_pred)
-        local_report = classification_report(y_test, y_pred)
-        local_feat_impces = pd.DataFrame(
-            best_model.feature_importances_, index=df.columns).sort_values(by=0, ascending=False)
-
-        local_rskf_results = pd.DataFrame([("Accuracy", accuracy_score(y_test, y_pred)), ("params", str(rsCV_result.best_params_)), ("seed", best_model.seed), ("TRAIN", str(
-            train_index)), ("TEST", str(test_index)), ("CM", local_cm), ("Classification report", local_report), ("Feature importances", local_feat_impces.to_dict())]).T
-
-        local_rskf_results.columns = local_rskf_results.iloc[0]
-        local_rskf_results = local_rskf_results[1:]
-        rskf_results = rskf_results.append(local_rskf_results)
-
-        #per class accuracy
-        local_support = precision_recall_fscore_support(y_test, y_pred)[3]
-        local_acc = np.diag(local_cm) / local_support
-        rskf_per_class_results.append(local_acc)
-
-
-elapsed = time() - start
-print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
-    elapsed / 60, elapsed))
 
 # Results
-rskf_results.to_csv("./results/xgb_ag_repeatedCV_record.csv", index=False)
-rskf_results = pd.read_csv("./results/xgb_ag_repeatedCV_record.csv")
+rkf_results.to_csv("xgb_ag_real_age_repeatedCV_record.csv", index=False)
+rkf_results = pd.read_csv("xgb_ag_real_age_repeatedCV_record.csv")
 
 
 # Accuracy distribution
-xgb_ag_acc_distrib = rskf_results["Accuracy"]
-xgb_ag_acc_distrib.columns = ["Accuracy"]
-xgb_ag_acc_distrib.to_csv(
-    "./results/xgb_ag_acc_distrib.csv", header=True, index=False)
-xgb_ag_acc_distrib = pd.read_csv("./results/xgb_ag_acc_distrib.csv")
-xgb_ag_acc_distrib = np.round(100 * xgb_ag_acc_distrib)
+xgb_acc_distrib = rkf_results["Accuracy"]
+xgb_acc_distrib.columns = ["Accuracy"]
+xgb_acc_distrib.to_csv("xgb_ag_real_age_acc_distrib.csv",
+                       header=True, index=False)
 
-plt.figure(figsize=(2.25, 3))
-sns.distplot(xgb_ag_acc_distrib, kde=False, bins=12)
-plt.savefig("./plots/xgb_ag_acc_distrib.pdf", bbox_inches="tight")
-plt.savefig("./plots/xgb_ag_acc_distrib.png", bbox_inches="tight")
+# %% Plot Feature Importances
 
-class_names = y.sort_values().unique()
-xgb_ag_per_class_acc_distrib = pd.DataFrame(
-    rskf_per_class_results, columns=class_names)
-xgb_ag_per_class_acc_distrib.dropna().to_csv(
-    "./results/xgb_ag_per_class_acc_distrib.csv")
-xgb_ag_per_class_acc_distrib = pd.read_csv(
-    "./results/xgb_ag_per_class_acc_distrib.csv", index_col=0)
-xgb_ag_per_class_acc_distrib = np.round(100 * xgb_ag_per_class_acc_distrib)
-xgb_ag_per_class_acc_distrib_describe = xgb_ag_per_class_acc_distrib.describe()
-xgb_ag_per_class_acc_distrib_describe.to_csv(
-    "./results/xgb_ag_per_class_acc_distrib.csv")
+rskf_results = pd.read_csv("xgb_ag_real_age_repeatedCV_record.csv")
+xgb_acc_distrib = pd.read_csv("xgb_ag_real_age_acc_distrib.csv")
 
-xgb_ag_per_class_acc_distrib = pd.melt(
-    xgb_ag_per_class_acc_distrib, var_name="Reservoir")
-
-plt.figure(figsize=(4.75, 3))
-plt.rc('font', family='Helvetica')
-sns.violinplot(x="Reservoir", y="value", cut=0,
-               data=xgb_ag_per_class_acc_distrib)
-sns.despine(left=True)
-# plt.xticks(rotation=45, ha="right")
-plt.xlabel("Species")
-plt.ylabel("Prediction accuracy\n ({0:.2f} ± {1:.2f})".format(
-    xgb_ag_per_class_acc_distrib["value"].mean(), xgb_ag_per_class_acc_distrib["value"].sem()), weight="bold")
-plt.savefig("./plots/xgb_ag_per_class_acc_distrib.pdf", bbox_inches="tight")
-plt.savefig("./plots/xgb_ag_per_class_acc_distrib.png", bbox_inches="tight")
-
-
-#%% Feature Importances
-
-## make this into bar with error bars across all best models
-
-rskf_results = pd.read_csv("./results/xgb_ag_repeatedCV_record.csv")
-
-# All feat imp
 all_featimp = pd.DataFrame(ast.literal_eval(
     rskf_results["Feature importances"][0]))
 
@@ -597,31 +547,23 @@ featimp_global_mean = all_featimp["mean"].mean()
 featimp_global_sem = all_featimp["mean"].sem()
 
 
-fig = all_featimp["mean"][-8:].plot(figsize=(2.2, 3),
-                                    kind="barh",
-                                    legend=False,
-                                    xerr=all_featimp["sem"],
-                                    ecolor='k')
+fig = all_featimp["mean"][-13:].plot(figsize=(2.2, 4),
+                                     kind="barh",
+                                     legend=False,
+                                     xerr=all_featimp["sem"],
+                                     ecolor='k')
 plt.xlabel("Feature importance")
 plt.axvspan(xmin=0, xmax=featimp_global_mean + 3 *
             featimp_global_sem, facecolor='r', alpha=0.3)
 plt.axvline(x=featimp_global_mean, color="r", ls="--", dash_capstyle="butt")
 sns.despine()
 
-# fig.set_yticklabels([
-#     "CD8 T cells (# in thymus)",
-#     "MEP cells (# in bone marrow)",
-#     "Erythroid Ter119 cells (# in bone marrow)",
-#     "Memory CD4 T cells (% PBMC)",
-#     "Memory T cells (% PBMC)",
-#     "Memory T cells (% spleen)",
-#     "Naive T cells (% spleen)",
-#     "Naive CD4 T cells (% spleen)",
-#     ])
+# Add mean accuracy of best models to plots
+plt.annotate("Average MSE:\n{0:.2} ± {1:.2}".format(xgb_acc_distrib.mean()[
+             0], xgb_acc_distrib.sem()[0]), xy=(0.07, 0), fontsize=8, color="k")
 
-plt.savefig("./plots/xgb_ag_feat_imp.pdf", bbox_inches="tight")
-plt.savefig("./plots/xgb_ag_feat_imp.png", bbox_inches="tight")
-
+plt.savefig("./plots/xgb_ag_real_age_feat_imp.pdf", bbox_inches="tight")
+plt.savefig("./plots/xgb_ag_real_age_feat_imp.png", bbox_inches="tight")
 
 
 ###### Blood-fed ########
