@@ -1,0 +1,428 @@
+# %% import modules
+
+```python
+import os
+import glob
+import re
+from time import time
+
+import numpy as np
+import pandas as pd
+
+import scipy.stats as stats
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+from random import randint
+from collections import Counter
+
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
+
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, confusion_matrix, mean_squared_error
+
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MaxAbsScaler
+from sklearn.preprocessing import maxabs_scale
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import Lasso
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import MultiTaskLassoCV
+from sklearn.linear_model import SGDClassifier
+from sklearn.linear_model import ElasticNet
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.svm import SVR
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import ExtraTreeClassifier
+from sklearn.tree import ExtraTreeRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
+from sklearn.decomposition import PCA
+from sklearn.feature_selection import SelectKBest
+
+from sklearn.pipeline import Pipeline
+from sklearn.pipeline import FeatureUnion
+
+import xgboost as xgb
+from xgboost import XGBClassifier
+from xgboost import XGBRegressor
+
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.ensemble import EasyEnsemble
+
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+
+import seaborn as sns
+sns.set(context="paper",
+        style="whitegrid",
+        palette="deep",
+        font_scale=1.4,
+        color_codes=True,
+        rc=None)
+
+HOME = os.path.expanduser("~") # just in case we need this later
+
+import warnings
+warnings.filterwarnings("ignore", message="Some inputs do not have OOB scores. This probably means too few trees were used to compute any reliable oob estimates")
+
+# Set random seed to insure reproducibility
+seed = 4
+
+## FUNCTIONS
+
+def plot_confusion_matrix(cm, classes,
+                          normalise=True,
+                          text=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting 'normalize=True'.
+    """
+
+    if normalise:
+            cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+            title="{0} (normalised)".format(title)
+            # print("Normalized confusion matrix")
+        # else:
+            # print('Confusion matrix')
+
+    # print(cm)
+
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    if text:
+        thresh = cm.max() / 2.
+        for i, j in itertools.product(range(cm.shape[0]),
+                                      range(cm.shape[1])):
+            plt.text(j, i, "{0:.2f}".format(cm[i, j]), horizontalalignment="center",
+                     color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+
+
+def cv_report(results, n_top=3):
+    for i in range(1, n_top + 1):
+        candidates = np.flatnonzero(results['rank_test_score'] == i)
+        for candidate in candidates:
+            print("Model with rank: {0}".format(i))
+            print("Mean validation score: {0:.3%} ± {1:.3%}".format(
+                  results['mean_test_score'][candidate],
+                  results['std_test_score'][candidate]))
+            print("Parameters: {0}".format(results['params'][candidate]))
+            print("")
+
+def cv_report_mse(results, n_top=3):
+    for i in range(1, n_top + 1):
+        candidates = np.flatnonzero(results['rank_test_score'] == i)
+        for candidate in candidates:
+            print("Model with rank: {0}".format(i))
+            print("Mean validation score: {0:.3} ± {1:.3}".format(
+                  results['mean_test_score'][candidate],
+                  results['std_test_score'][candidate]))
+            print("Parameters: {0}".format(results['params'][candidate]))
+            print("")
+
+def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping_rounds=50):
+    # From https://www.analyticsvidhya.com/blog/2016/03/complete-guide-parameter-tuning-xgboost-with-codes-python/
+    if useTrainCV:
+        xgb_param = alg.get_xgb_params()
+        xgtrain = xgb.DMatrix(dtrain[predictors].values, label=dtrain[target].values)
+        cvresult = xgb.cv(xgb_param, xgtrain, num_boost_round=alg.get_params()['n_estimators'], nfold=cv_folds,
+            metrics='auc', early_stopping_rounds=early_stopping_rounds, show_progress=False)
+        alg.set_params(n_estimators=cvresult.shape[0])
+
+    #Fit the algorithm on the data
+    alg.fit(dtrain[predictors], dtrain['Disbursed'],eval_metric='auc')
+
+    #Predict training set:
+    dtrain_predictions = alg.predict(dtrain[predictors])
+    dtrain_predprob = alg.predict_proba(dtrain[predictors])[:,1]
+
+    #Print model report:
+    print("\nModel Report")
+    print("Accuracy : %.4g" % metrics.accuracy_score(dtrain['Disbursed'].values, dtrain_predictions))
+    print("AUC Score (Train): %f" % metrics.roc_auc_score(dtrain['Disbursed'], dtrain_predprob))
+
+    feat_imp = pd.Series(alg.booster().get_fscore()).sort_values(ascending=False)
+    feat_imp.plot(kind='bar', title='Feature Importances')
+    plt.ylabel('Feature Importance Score')
+
+# %% import data
+df_11 = pd.read_table("./mosquitoes_spectra_11.dat", index_col="Age")
+
+df_11 = df_11.iloc[:,1:-1]
+
+# %% transform data
+df_11[df_11.columns] = StandardScaler().fit_transform(df_11[df_11.columns].as_matrix())
+df_11.head()
+
+```
+
+# Spot-checking classification approaches
+```python
+
+# determine size of data to use
+X = df_11.astype(float)
+y = df_11.index
+
+# under-sample over-represented classes
+rus = RandomUnderSampler(random_state=34)
+X_resampled, y_resampled = rus.fit_sample(X, y)
+
+# cross-val settings
+seed = 4
+validation_size = 0.3
+num_splits = 10
+
+models = []
+models.append(("LR", LogisticRegression()))
+models.append(("SGD", SGDClassifier()))
+# models.append(("LDA", LinearDiscriminantAnalysis()))
+models.append(("KNN", KNeighborsClassifier()))
+models.append(("CART", DecisionTreeClassifier()))
+models.append(("RF", RandomForestClassifier()))
+models.append(("ET", ExtraTreeClassifier()))
+models.append(("XGB", XGBClassifier()))
+models.append(("NB", GaussianNB()))
+models.append(("SVM", SVC()))
+
+# generate results for each model in turn
+results = []
+names = []
+scoring = "accuracy"
+
+for name, model in models:
+    #    kfold = KFold(n=num_instances, n_splits=num_splits, random_state=seed)
+    # kfold = StratifiedKFold(y, n_splits=num_splits, shuffle=True,
+    # random_state=seed) # stratifiedKFold fails with ValueError: array must
+    # not contain infs or NaNs
+    sss = StratifiedShuffleSplit(
+        n_splits=num_splits, test_size=validation_size, random_state=seed)
+    sss.split(X_resampled, y_resampled)
+    cv_results = cross_val_score(model, X_resampled, y_resampled, cv=sss, scoring=scoring)
+    results.append(cv_results)
+    names.append(name)
+    msg = "Cross val score for {0}: {1:.2%} ± {2:.2%}".format(
+        name, cv_results.mean(), cv_results.std())
+    print(msg)
+
+```
+
+# plot
+```python
+sns.boxplot(x=names, y=results)
+sns.despine(offset=10, trim=True)
+plt.xticks(rotation=30)
+plt.ylabel("Accuracy (median, quartiles, range)")
+plt.savefig("./plots/spot_check_age_11_rus.png", bbox_inches="tight")
+
+```
+
+
+# Optimising Gradient boosting with XGBoost
+
+```python
+
+# Parameter search
+
+# features & labels
+X = df_11.astype(float)
+y = df_11.index
+
+# under-sample over-represented classes
+rus = RandomUnderSampler(random_state=34)
+X_resampled, y_resampled = rus.fit_sample(X, y)
+
+# cross-val settings
+seed = 4
+validation_size = 0.3
+num_splits = 10
+scoring = "accuracy"
+
+# cross validation algorithm
+sss = StratifiedShuffleSplit(
+    n_splits=num_splits, test_size=validation_size, random_state=seed)
+sss.split(X_resampled, y_resampled)
+
+# base algorithm settings
+classifier = XGBClassifier(nthread=1)
+
+# define hyperparameter space to test
+# for troubleshooting:
+# max_depth = [2, 4]
+# n_estimators = [100, 400, 500]
+# learning_rate = [0.01, 0.1]
+# colsample_bytree = [0.1, 1]
+
+# the real deal:
+max_depth = [2, 4, 6, 8]  # 4?
+n_estimators = [100, 300, 500, 800]  # 400?
+learning_rate = [0.001, 0.01, 0.1, 0.2, 0.3]  # 0.1?
+colsample_bytree = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1]  # 0.2?
+
+
+parameters = {"max_depth": max_depth,
+              "learning_rate": learning_rate,
+              "n_estimators": n_estimators,
+              "colsample_bytree": colsample_bytree}
+
+# Grid search
+start = time()
+gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+scoring=scoring, n_jobs=-1, cv=sss)
+
+gsCV_result = gsCV.fit(X_resampled, y_resampled)
+elapsed = time() - start
+
+# # results
+print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(elapsed/60, elapsed))
+cv_report(gsCV_result.cv_results_)
+
+# Random search
+# n_iter_search = 20
+# random_search = RandomizedSearchCV(
+#     estimator=classifier, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
+# start = time()
+# random_search.fit(X, y)
+# elapsed = time() - start
+
+# results
+# print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+    # elapsed / 60, elapsed))
+# cv_report(gsCV_result.cv_results_)
+
+# means, stdevs = [], []
+# for params, mean_score, scores in gsCV_result.grid_scores_:
+#     stdev = scores.std()
+#     means.append(mean_score)
+#     stdevs.append(stdev)
+#     print("{0:.2%} ({1:.2%}) with: {2}".format(mean_score, stdev, params))
+
+```
+Time elapsed: 9.93 minutes (595.7 sec)
+Model with rank: 1
+Mean validation score: 56.566% ± 4.091%
+Parameters: {'learning_rate': 0.2, 'colsample_bytree': 0.4, 'n_estimators': 300, 'max_depth': 4}
+
+Model with rank: 2
+Mean validation score: 56.364% ± 4.535%
+Parameters: {'learning_rate': 0.01, 'colsample_bytree': 0.4, 'n_estimators': 300, 'max_depth': 8}
+
+Model with rank: 2
+Mean validation score: 56.364% ± 4.624%
+Parameters: {'learning_rate': 0.3, 'colsample_bytree': 0.8, 'n_estimators': 300, 'max_depth': 2}
+
+# Finalising model
+```python
+# features & labels
+X = df_11.astype(float)
+y = df_11.index
+
+# encode Y class values as integers
+# label_encoder = LabelEncoder()
+# label_encoder = label_encoder.fit(y)
+# label_encoded_y = label_encoder.transform(y)
+
+# under-sample over-represented classes
+rus = RandomUnderSampler(random_state=34)
+X_resampled, y_resampled = rus.fit_sample(X, y)
+
+# cross-val settings
+seed = 4
+validation_size = 0.25
+num_splits = 10
+
+# splitting dataset
+X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=validation_size, stratify=None, random_state=seed)
+
+# cross validation algorithm
+sss = StratifiedShuffleSplit(
+    n_splits=num_splits, test_size=validation_size, random_state=seed)
+sss.split(X_train, y_train)
+
+# preparing model
+classifier = XGBClassifier(n_estimators=300,
+                           max_depth=4,
+                           learning_rate=0.2,
+                           colsample_bytree=0.4,
+                           nthread=1)
+
+# Pipeline
+model = classifier
+
+# LEARN!
+start = time()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+elapsed = time() - start
+
+print("Time elapsed: {0:.2f} seconds".format(elapsed))
+print("Model: {0}\n\nAccuracy on test set:{1:.2%}\n\nClassification report:\n{2}".format(
+    model, accuracy_score(y_test, y_pred), classification_report(y_test, y_pred)))
+
+```
+
+
+With random underng:
+Time elapsed: 0.20 seconds
+Model: XGBClassifier(base_score=0.5, colsample_bylevel=1, colsample_bytree=0.4,
+       gamma=0, learning_rate=0.2, max_delta_step=0, max_depth=4,
+       min_child_weight=1, missing=None, n_estimators=300, nthread=1,
+       objective='multi:softprob', reg_alpha=0, reg_lambda=1,
+       scale_pos_weight=1, seed=0, silent=True, subsample=1)
+
+Accuracy on test set:51.81%
+
+Classification report:
+             precision    recall  f1-score   support
+
+          1       0.60      0.86      0.71        14
+          3       0.33      0.38      0.36        13
+          5       0.46      0.33      0.39        18
+          7       0.70      0.78      0.74         9
+          9       0.36      0.45      0.40        11
+        old       0.73      0.44      0.55        18
+
+avg / total       0.53      0.52      0.51        83
+
+# Confusion matrix
+```python
+
+# class_names = y_test.sort_values().unique()
+class_names = ["1", "3", "5", "7", "9", "old"]
+cm = confusion_matrix(y_test, y_pred)
+np.set_printoptions(precision=2)
+
+# print(y_test.unique())
+# print(cm)
+plt.figure()
+plot_confusion_matrix(cm, classes=class_names, title="XGB confusion matrix")
+plt.annotate("Accuracy: {0:.2%}".format(accuracy_score(y_test, y_pred)), xy=[0, 0], xytext=[len(
+    class_names) - 1.5, (len(class_names) + 1)], color="darkblue", style="italic", size="small")
+
+plt.savefig("./plots/xgb_CM_age_11_rus.png", bbox_inches="tight")
+
+```
