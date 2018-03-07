@@ -1032,10 +1032,10 @@ age_prop_int_pred = best_clf.predict(df_test_intervention)
 # Predict and reconstruct age structure of population
 plt.figure()
 ax = sns.distplot(df_test.index, bins=len(
-    df_test.index.unique()), label="True age")
+    df_test.index.unique()), label="True age", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "b"})
 ax = sns.distplot(age_prop_pred, bins=len(
-    df_test.index.unique()), color="r", label="Predicted age")
-ax.set(xlim=(0, 25), xlabel="Mosquito age", ylabel="Proportion in population")
+    df_test.index.unique()), color="r", label="Predicted age", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "r"})
+ax.set(xlim=(1, 25), xlabel="Mosquito age", ylabel="Proportion in population")
 plt.legend()
 plt.savefig("./plots/lr_ag_age_struct_SF_GR.pdf", bbox_inches="tight")
 plt.savefig("./plots/lr_ag_age_struct_SF_GR.png", bbox_inches="tight")
@@ -1043,10 +1043,10 @@ plt.savefig("./plots/lr_ag_age_struct_SF_GR.png", bbox_inches="tight")
 # Predict and reconstruct age structure of population post intervention
 plt.figure()
 ax = sns.distplot(df_test_intervention.index, bins=len(
-    df_test_intervention.index.unique()), label="True age")
+    df_test_intervention.index.unique()), label="True age", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "b"})
 ax = sns.distplot(age_prop_int_pred, bins=len(
-    df_test_intervention.index.unique()), color="r", label="Predicted age")
-ax.set(xlim=(0, 25), xlabel="Mosquito age", ylabel="Proportion in population")
+    df_test_intervention.index.unique()), color="r", label="Predicted age", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "r"})
+ax.set(xlim=(1, 25), xlabel="Mosquito age", ylabel="Proportion in population")
 arrow = plt.arrow(x=4, y=0.4, dx=0, dy=-0.15, width=0.25,
                   head_length=0.03, color="k", label="Intervention")
 plt.legend()
@@ -1056,10 +1056,10 @@ plt.savefig("./plots/lr_ag_age_struct_int_SF_GR.png", bbox_inches="tight")
 # Predict and reconstruct age structure of population with missing ages only (worse case scenario)
 plt.figure()
 ax = sns.distplot(df_test_missing.index, bins=len(
-    df_test_missing.index.unique()), label="True age")
+    df_test_missing.index.unique()), label="True age", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "b"})
 ax = sns.distplot(age_prop_int_pred,  bins=len(
-    df_test_missing.index.unique()), color="r", label="Predicted age")
-ax.set(xlim=(0, 25), xlabel="Mosquito age", ylabel="Proportion in population")
+    df_test_missing.index.unique()), color="r", label="Predicted age", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "r"})
+ax.set(xlim=(1, 25), xlabel="Mosquito age", ylabel="Proportion in population")
 arrow = plt.arrow(x=4, y=0.4, dx=0, dy=-0.15, width=0.25, head_length=0.03, color="k", label="Intervention")
 plt.legend()
 plt.savefig("./plots/lr_ag_age_struct_missing_SF_GR.pdf", bbox_inches="tight")
@@ -1068,7 +1068,7 @@ plt.savefig("./plots/lr_ag_age_struct_missing_SF_GR.png", bbox_inches="tight")
 
 ###### Gravid ########
 # %% Spot check classification models
-df = df_ag_GR.copy()
+    df = df_ag_GR.copy()
 y = df.index
 X = df.values
 
