@@ -25,8 +25,9 @@ ValidationOutput = output(ValidationInput)
 
 # import data
 X = ["a", "b", "c", "d"]
-kf = KFold(n_splits=2)
-for train, test in kf.split(X):
+kf = KFold(n_splits=5)
+
+for train, tst in kf.split(X):
   print("$train, $test")
 end
 

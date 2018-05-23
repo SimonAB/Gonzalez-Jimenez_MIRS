@@ -1,4 +1,0 @@
-# Predicting mosquito age from near infrared spectra
-
-During this Christmas break I have been working on our mosquitoes project inspired by your results with our data. As we discussed before, the spectra of mosquitoes seem to change with age until they are around 9-11 days old when the spectra start to remain constant. I have created two new matrices that I would like you to perform a classification task. The first one has 5 categories to classify the mosquitoes (the youngest 4 ages: 1, 3, 5, 7 days old and a category named "old" with the oldest mosquitoes). The second matrix has got one category more (1, 3, 5, 7, 9 and old). I hope this new way of classifying the mosquitoes improves a lot the accuracy of our machine learning. If does so, we can send the article to a good journal this month since the paper is almost written. (later we can discuss about what other experiments we can try).
-Thank you so much four your help.

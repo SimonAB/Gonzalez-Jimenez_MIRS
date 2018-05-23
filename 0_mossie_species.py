@@ -177,20 +177,25 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
     feat_imp.plot(kind='bar', title='Feature Importances')
     plt.ylabel('Feature Importance Score')
 
-#%% load data 
+#%% load data
 
 
 # import full dataset
 df_full = pd.read_table("mosquitoes_spectra (180227).dat")
 
 df_full.head()
+Counter(df_full["Species"])
+
 # select species data
 df_species = df_full.copy()
 df_species.index = df_species["Species"]
 df_species = df_species.iloc[:,5:]
+Counter(df_species.index)
 
 # transform species data
 df_species[df_species.columns] = StandardScaler().fit_transform(df_species[df_species.columns].as_matrix())
+
+
 
 # select real age data
 df_real_age = df_full.copy()
@@ -253,10 +258,13 @@ df_sp_food = df_full.copy()
 df_sp_food.index = df_sp_food["Species"]
 df_sp_BF = df_sp_food[df_sp_food["Status"] == "BF"].iloc[:, 5:]
 df_sp_SF = df_sp_food[df_sp_food["Status"] == "SF"].iloc[:, 5:]
-df_sp_GR = df_sp_food[df_sp_food["Status"] == "GR"].iloc[:, 5:] 
+df_sp_GR = df_sp_food[df_sp_food["Status"] == "GR"].iloc[:, 5:]
+df_sp_SF_GR = df_sp_food[(df_sp_food["Status"] == "GR") | (
+    df_sp_food["Status"] == "SF")].iloc[:, 5:]
+df_sp_ALL = df_sp_food.iloc[:, 5:]
 
 # transform species data
-for df in [df_sp_BF, df_sp_SF, df_sp_GR]:
+for df in [df_sp_BF, df_sp_SF, df_sp_GR, df_sp_SF_GR, df_sp_ALL]:
     df[df.columns] = StandardScaler().fit_transform(df[df.columns].as_matrix())
 
 
@@ -291,18 +299,19 @@ df_species_age[df_species_age.columns] = StandardScaler().fit_transform(df_speci
 
 
 
-#%% Predict species: all food
-
+#%% Predict species: Gr & SF
+df = df_sp_SF_GR
     # determine size of data to use
-X = df_species.astype(float)
-y = df_species.index
+X = df.astype(float)
+y = df.index
+y.shape
 
 # under-sample over-represented classes
-rus = RandomUnderSampler(random_state=34)
-X_resampled, y_resampled = rus.fit_sample(X, y)
+# rus = RandomUnderSampler(random_state=34)
+# X_resampled, y_resampled = rus.fit_sample(X, y)
 
-X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
-y_resampled_df = X_resampled_df.index
+# X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+# y_resampled_df = X_resampled_df.index
 
 # cross-val settings
 
@@ -314,12 +323,12 @@ models.append(("KNN", KNeighborsClassifier()))
 models.append(("LR", LogisticRegressionCV()))
 # models.append(("SGD", SGDClassifier()))
 models.append(("SVM", SVC()))
-models.append(("NB", GaussianNB()))
+# models.append(("NB", GaussianNB()))
 # models.append(("LDA", LinearDiscriminantAnalysis()))
 # models.append(("CART", DecisionTreeClassifier()))
 models.append(("RF", RandomForestClassifier()))
 # models.append(("ET", ExtraTreeClassifier()))
-models.append(("XGB", XGBClassifier()))
+models.append(("XGB", XGBClassifier(objective="binary:logistic")))
 
 # generate results for each model in turn
 results = []
@@ -334,7 +343,7 @@ for name, model in models:
     sss = StratifiedShuffleSplit(
         n_splits=num_splits, test_size=validation_size, random_state=seed)
     # sss.split(X_resampled_df, y_resampled_df)
-    sss.split(X, y)
+    # sss.split(X, y)
     # cv_results = cross_val_score(model, X_resampled_df, y_resampled_df, cv=sss, scoring=scoring)
     cv_results = cross_val_score(model, X, y, cv=sss, scoring=scoring)
     results.append(cv_results)
@@ -344,42 +353,43 @@ for name, model in models:
     print(msg)
 
 #%% plot
+g = plt.figure(figsize=(2.4, 3))
 sns.boxplot(x=names, y=results, whis=10)
 sns.despine(offset=10, trim=True)
 plt.title("Predicting Mosquito Species", weight="bold")
-plt.xticks(rotation=30)
+plt.xticks(rotation=90)
 plt.ylabel("Accuracy (median, quartiles, range)")
-plt.savefig("./plots/spot_check_species.pdf", bbox_inches="tight")
-plt.savefig("./plots/spot_check_species.png", bbox_inches="tight")
+plt.savefig("./plots/spot_check_species_SF_GR.pdf", bbox_inches="tight")
+plt.savefig("./plots/spot_check_species_SF_GR.png", bbox_inches="tight")
 
 
 #%% Logistic Regression
 
 # load data
-df = df_species.copy()
+df = df_sp_SF_GR.copy()
 X = df.values
 y = df.index
 
 # cross validation
 validation_size = 0.3
 num_splits = 10
-num_repeats = 2
-num_rounds = 2
+num_repeats = 10
+num_rounds = 10
 scoring = "accuracy"
 
 # preparing model
-classifier = LogisticRegressionCV(Cs=10,
+classifier = LogisticRegressionCV(Cs=30,
                                   fit_intercept=True,
-                                  cv=5,
+                                  cv=10,
                                   dual=False,
                                   penalty="l2",
                                   scoring="accuracy",
                                   solver="lbfgs",
                                   tol=0.0001,
-                                  max_iter=100,
+                                  max_iter=1000,
                                   class_weight="balanced",
                                   n_jobs=-1,
-                                  verbose=0,
+                                  verbose=1,
                                   refit=True,
                                   intercept_scaling=1.0,
                                   multi_class="ovr",
@@ -408,8 +418,6 @@ for round in range(num_rounds):
         #fit model
         classifier.fit(X_train, y_train)
 
-        classifier.scores_
-
         #test model
         y_pred = classifier.predict(np.delete(X, train_index, axis=0))
         y_predproba = classifier.predict_proba(
@@ -420,7 +428,9 @@ for round in range(num_rounds):
         local_scores = pd.DataFrame.from_records([classifier.scores_])
 
         scores_table = pd.DataFrame({"scores": pd.Series(
-            classifier.scores_), "species": df.index.unique()}).set_index("species")
+            classifier.scores_)
+            # , "Species": df.index.unique()
+            })#.set_index("Species")
 
         # combine score outputs
         rkf_scores = pd.merge(rkf_scores, scores_table,
@@ -467,7 +477,6 @@ rskf_results = pd.read_csv("./results/lr_sp_repeatedCV_record.csv")
 rkf_scores = pd.read_csv("./results/lr_sp_rkf_scores.csv")
 # rkf_scores.index = y.unique().zfill(1)
 
-
 # Accuracy distribution
 lr_sp_acc_distrib = rskf_results["Accuracy"]
 lr_sp_acc_distrib.columns = ["Accuracy"]
@@ -497,7 +506,7 @@ lr_sp_per_class_acc_distrib_describe.to_csv(
 
 lr_sp_per_class_acc_distrib = pd.melt(
     lr_sp_per_class_acc_distrib, var_name="AR age")
-lr_sp_per_class_acc_distrib
+lr_sp_per_class_acc_distrib.groupby("AR age").mean()
 plt.figure(figsize=(4.75, 3))
 plt.rc('font', family='Helvetica')
 sns.violinplot(x="AR age", y="value", cut=0,
@@ -507,34 +516,58 @@ sns.despine(left=True)
 plt.xticks(rotation=0, ha="right")
 plt.xlabel("Species")
 plt.ylabel("Prediction accuracy")
-plt.savefig("./plots/lr_sp_per_class_acc_distrib.pdf", bbox_inches="tight")
-plt.savefig("./plots/lr_sp_per_class_acc_distrib.png", bbox_inches="tight")
+plt.savefig("./plots/lr_sp_per_class_acc_distrib_SF_GR.pdf", bbox_inches="tight")
+plt.savefig("./plots/lr_sp_per_class_acc_distrib_SF_GR.png", bbox_inches="tight")
+
+# Confusion matrix
+rskf_results = pd.read_csv("./results/lr_sp_repeatedCV_record.csv")
+
+n = 10
+best_n_cm = np.zeros((len(y.unique()), len(y.unique())))
+for model in np.arange(0, 10):
+    ar = rskf_results.sort_values(
+        by="Accuracy", ascending=False).iloc[model, 4].replace('[ ', '[').split()
+    ar = np.array(ast.literal_eval(",".join(ar)))
+    best_n_cm += ar
+best_n_cm = best_n_cm / n
+
+top10_acc = rskf_results.sort_values(
+    by="Accuracy", ascending=False)["Accuracy"][:9].mean()
+
+class_names = y.sort_values().unique()
+
+plt.figure(figsize=(4, 4))
+plot_confusion_matrix(best_n_cm, normalise=True, classes=class_names)
+print("Accuracy: ",top10_acc)
+
+plt.savefig("./plots/lr_sp_cm_SF_GR.pdf", bbox_inches="tight")
+plt.savefig("./plots/lr_sp_cm_SF_GR.png", bbox_inches="tight")
 
 
 #%% Optimising XGBoost
 # Parameter search
 
 # features & labels
-X = df_species.values
-y = df_species.index
-Counter(y)
+df = df_sp_SF_GR.copy()
+X = df.values
+y = df.index
 
 # cross validation
 validation_size = 0.3
 num_splits = 10
-num_repeats = 10
-# num_rounds = 10
+num_repeats = 5
+num_rounds = 5
 scoring = "accuracy"
 
 # preparing model
-model = XGBClassifier(nthread=1, seed=seed)
+model = XGBClassifier(nthread=-1, seed=seed)
 
 # Grid search paramater space
 colsample_bytree = [0.1, 0.3, 0.5, 0.8, 1]
 learning_rate = [0.001, 0.01, 0.1]
-max_depth = [6, 8, 10]
-min_child_weight = [1, 3, 5, 7]
-n_estimators = [50, 100, 300, 500]
+max_depth = [4, 7, 10]
+min_child_weight = [1, 4, 7]
+n_estimators = [300, 500, 700]
 
 # Mini Grid search paramater space
 # colsample_bytree = [0.1, 1]
@@ -560,53 +593,53 @@ rskf_results = pd.DataFrame() # model parameters and global accuracy score
 rskf_per_class_results = [] # per class accuracy scores
 start = time()
 
-# for round in range(num_rounds):
-#     seed=np.random.randint(0, 81470108)
+for round in range(num_rounds):
+    seed=np.random.randint(0, 81470108)
 
 #     # under-sample over-represented classes
 #     rus = RandomUnderSampler(random_state=seed)
 #     X_resampled, y_resampled = rus.fit_sample(X, y) #produces numpy arrays
 
-for train_index, test_index in rskf.split(X, y):
-    X_train, X_test = X[train_index], X[test_index]
-    y_train, y_test = y[train_index], y[test_index]
+    for train_index, test_index in rskf.split(X, y):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
 
-    # GRID SEARCH
-    # # grid search on each iteration
-    # start = time()
-    # gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
-    #                     scoring=scoring, cv=sss, n_jobs=-1, verbose=1)
-    # CV_result = gsCV.fit(X_train, y_train)
-    # best_model = model(**CV_result.best_params_)
+        # GRID SEARCH
+        # # grid search on each iteration
+        # start = time()
+        # gsCV = GridSearchCV(estimator=classifier, param_grid=parameters,
+        #                     scoring=scoring, cv=sss, n_jobs=-1, verbose=1)
+        # CV_result = gsCV.fit(X_train, y_train)
+        # best_model = model(**CV_result.best_params_)
 
-    # RANDOMISED GRID SEARCH
-    n_iter_search = 100
-    rsCV = RandomizedSearchCV(verbose=1,
-        estimator=model, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
-    rsCV_result = rsCV.fit(X_train, y_train)
+        # RANDOMISED GRID SEARCH
+        n_iter_search = 40
+        rsCV = RandomizedSearchCV(verbose=1,
+            estimator=model, param_distributions=parameters, n_iter=n_iter_search, cv=sss, n_jobs=-1)
+        rsCV_result = rsCV.fit(X_train, y_train)
 
-    best_model = XGBClassifier(nthread=1, seed=seed, **rsCV_result.best_params_)
+        best_model = XGBClassifier(nthread=1, seed=seed, **rsCV_result.best_params_)
 
-    #fit model
-    best_model.fit(X_train, y_train)
+        #fit model
+        best_model.fit(X_train, y_train)
 
-    #test model
-    y_pred = best_model.predict(np.delete(X_resampled, train_index, axis=0))
-    y_test = np.delete(y_resampled, train_index, axis=0)
-    local_cm = confusion_matrix(y_test, y_pred)
-    local_report = classification_report(y_test, y_pred)
-    local_feat_impces = pd.DataFrame(best_model.feature_importances_, index=df_species.columns).sort_values(by=0, ascending=False)
+        #test model
+        y_pred = best_model.predict(np.delete(X, train_index, axis=0))
+        y_test = np.delete(y, train_index, axis=0)
+        local_cm = confusion_matrix(y_test, y_pred)
+        local_report = classification_report(y_test, y_pred)
+        local_feat_impces = pd.DataFrame(best_model.feature_importances_, index=df.columns).sort_values(by=0, ascending=False)
 
-    local_rskf_results = pd.DataFrame([("Accuracy",accuracy_score(y_test, y_pred)), ("params",str(rsCV_result.best_params_)), ("seed", best_model.seed), ("TRAIN",str(train_index)), ("TEST",str(test_index)), ("CM", local_cm), ("Classification report", local_report), ("Feature importances", local_feat_impces.to_dict())]).T
+        local_rskf_results = pd.DataFrame([("Accuracy",accuracy_score(y_test, y_pred)), ("params",str(rsCV_result.best_params_)), ("seed", best_model.seed), ("TRAIN",str(train_index)), ("TEST",str(test_index)), ("CM", local_cm), ("Classification report", local_report), ("Feature importances", local_feat_impces.to_dict())]).T
 
-    local_rskf_results.columns=local_rskf_results.iloc[0]
-    local_rskf_results = local_rskf_results[1:]
-    rskf_results = rskf_results.append(local_rskf_results)
+        local_rskf_results.columns=local_rskf_results.iloc[0]
+        local_rskf_results = local_rskf_results[1:]
+        rskf_results = rskf_results.append(local_rskf_results)
 
-    #per class accuracy
-    local_support = precision_recall_fscore_support(y_test, y_pred)[3]
-    local_acc = np.diag(local_cm)/local_support
-    rskf_per_class_results.append(local_acc)
+        #per class accuracy
+        local_support = precision_recall_fscore_support(y_test, y_pred)[3]
+        local_acc = np.diag(local_cm)/local_support
+        rskf_per_class_results.append(local_acc)
 
 elapsed = time() - start
 print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
@@ -614,7 +647,9 @@ print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
 
 # Write results to disk
 rskf_results.to_csv("./results/xgb_sp_repeatedCV_record.csv", index=False)
-rskf_per_class_results.to_csv("./results/xgb_sp_per_class_results.csv", index=False)
+df_rskf_per_class_results = pd.DataFrame(rskf_per_class_results)
+df_rskf_per_class_results.to_csv("./results/xgb_sp_per_class_results.csv", index=False)
+
 
 #%% Confusion matrix
 rskf_results = pd.read_csv("./results/xgb_sp_repeatedCV_record.csv")
@@ -623,9 +658,9 @@ best_cm = rskf_results.sort_values(
     by="Accuracy", ascending=False).iloc[0, 5].split()
 # best_cm = np.array(ast.literal_eval(",".join(best_cm)))
 print(best_cm) # '[[95  0]\n [ 0 94]]'
-best_cm = np.array([[95,  0],
-                 [ 0, 94]]) # entering this manually, because there is a spurious space in the literal output that stumps the parser ()
-class_names = df_species.index.sort_values().unique()
+best_cm = np.array([[139,  13],
+                 [ 24, 78]]) # entering this manually, because there is a spurious space in the literal output that stumps the parser ()
+class_names = df.index.sort_values().unique()
 
 plt.figure(figsize=(4, 4))
 plot_confusion_matrix(best_cm, classes = class_names, xrotation=0, yrotation=0)
@@ -647,8 +682,8 @@ plt.savefig("./plots/xgb_sp_acc_distrib.png", bbox_inches="tight")
 
 #%% plot per class distribution
 rskf_per_class_results = pd.read_csv("./results/xgb_sp_per_class_results.csv")
-class_names = df_species.index.sort_values().unique()
-xgb_sp_per_class_acc_distrib = pd.DataFrame(rskf_per_class_results, columns=class_names)
+class_names = df.index.sort_values().unique()
+xgb_sp_per_class_acc_distrib = rskf_per_class_results.rename(columns={"0": str(list(class_names)[0]), "1": str(list(class_names)[1])})
 xgb_sp_per_class_acc_distrib.dropna().to_csv("./results/xgb_sp_per_class_acc_distrib.csv")
 xgb_sp_per_class_acc_distrib = pd.read_csv("./results/xgb_sp_per_class_acc_distrib.csv", index_col=0)
 xgb_sp_per_class_acc_distrib = np.round(100*xgb_sp_per_class_acc_distrib)
@@ -1251,3 +1286,246 @@ plt.annotate("Average MSE:\n{0:.3f} ± {1:.3f}".format(xgb_sp_acc_distrib.mean()
 
 plt.savefig("./plots/xgb_sp_SF_feat_imp.pdf", bbox_inches="tight")
 plt.savefig("./plots/xgb_sp_SF_feat_imp.png", bbox_inches="tight")
+
+
+#%% Predict species: all
+df = df_sp_ALL
+# determine size of data to use
+X = df.astype(float)
+y = df.index
+
+# under-sample over-represented classes
+# rus = RandomUnderSampler(random_state=34)
+# X_resampled, y_resampled = rus.fit_sample(X, y)
+
+# X_resampled_df, X_resampled_df.index, X_resampled_df.columns = pd.DataFrame(X_resampled), y_resampled, X.columns
+# y_resampled_df = X_resampled_df.index
+
+# cross-val settings
+
+validation_size = 0.3
+num_splits = 10
+
+models = []
+models.append(("KNN", KNeighborsClassifier()))
+models.append(("LR", LogisticRegressionCV()))
+# models.append(("SGD", SGDClassifier()))
+models.append(("SVM", SVC()))
+# models.append(("NB", GaussianNB()))
+# models.append(("LDA", LinearDiscriminantAnalysis()))
+# models.append(("CART", DecisionTreeClassifier()))
+models.append(("RF", RandomForestClassifier()))
+# models.append(("ET", ExtraTreeClassifier()))
+models.append(("XGB", XGBClassifier(objective="binary:logistic")))
+
+# generate results for each model in turn
+results = []
+names = []
+scoring = "accuracy"
+
+for name, model in models:
+    #    kfold = KFold(n=num_instances, n_splits=num_splits, random_state=seed)
+    # kfold = StratifiedKFold(y, n_splits=num_splits, shuffle=True,
+    # random_state=seed) # stratifiedKFold fails with ValueError: array must
+    # not contain infs or NaNs
+    sss = StratifiedShuffleSplit(
+        n_splits=num_splits, test_size=validation_size, random_state=seed)
+    # sss.split(X_resampled_df, y_resampled_df)
+    # sss.split(X, y)
+    # cv_results = cross_val_score(model, X_resampled_df, y_resampled_df, cv=sss, scoring=scoring)
+    cv_results = cross_val_score(model, X, y, cv=sss, scoring=scoring)
+    results.append(cv_results)
+    names.append(name)
+    msg = "Cross val score for {0}: {1:.2%} ± {2:.2%}".format(
+        name, cv_results.mean(), cv_results.std())
+    print(msg)
+
+#%% plot
+g = plt.figure(figsize=(2.4, 3))
+sns.boxplot(x=names, y=results, whis=10)
+sns.despine(offset=10, trim=True)
+plt.title("Predicting Mosquito Species", weight="bold")
+plt.xticks(rotation=90)
+plt.ylabel("Accuracy (median, quartiles, range)")
+plt.savefig("./plots/spot_check_species_ALL.pdf", bbox_inches="tight")
+plt.savefig("./plots/spot_check_species_ALL.png", bbox_inches="tight")
+
+#%% Logistic Regression
+
+# load data
+df = df_sp_ALL.copy()
+X = df.values
+y = df.index
+
+# cross validation
+validation_size = 0.3
+num_splits = 10
+num_repeats = 10
+num_rounds = 10
+scoring = "accuracy"
+
+# preparing model
+classifier = LogisticRegressionCV(Cs=30,
+                                  fit_intercept=True,
+                                  cv=10,
+                                  dual=False,
+                                  penalty="l2",
+                                  scoring="accuracy",
+                                  solver="lbfgs",
+                                  tol=0.0001,
+                                  max_iter=1000,
+                                  class_weight="balanced",
+                                  n_jobs=-1,
+                                  verbose=1,
+                                  refit=True,
+                                  intercept_scaling=1.0,
+                                  multi_class="ovr",
+                                  random_state=seed)
+
+
+# repeated random stratified splitting of dataset
+rskf = RepeatedStratifiedKFold(
+    n_splits=num_splits, n_repeats=num_repeats, random_state=seed)
+
+# prepare matrices of results
+rskf_results = pd.DataFrame()  # model parameters and global accuracy score
+rskf_per_class_results = []  # per class accuracy scores
+rkf_scores = pd.DataFrame(
+    columns=["species", "scores mean", "scores sem"]).set_index("species")
+
+start = time()
+
+for round in range(num_rounds):
+    seed = np.random.randint(0, 81470108)
+
+    for train_index, test_index in rskf.split(X, y):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        #fit model
+        classifier.fit(X_train, y_train)
+
+        #test model
+        y_pred = classifier.predict(np.delete(X, train_index, axis=0))
+        y_predproba = classifier.predict_proba(
+            np.delete(X, train_index, axis=0))
+        y_test = np.delete(y, train_index, axis=0)
+        local_cm = confusion_matrix(y_test, y_pred)
+        local_report = classification_report(y_test, y_pred)
+        local_scores = pd.DataFrame.from_records([classifier.scores_])
+
+        scores_table = pd.DataFrame({"scores": pd.Series(
+            classifier.scores_)
+            # , "Species": df.index.unique()
+        })  # .set_index("Species")
+
+        # combine score outputs
+        rkf_scores = pd.merge(rkf_scores, scores_table,
+                              left_index=True, right_index=True, how='outer')
+
+        local_rskf_results = pd.DataFrame([("Accuracy", accuracy_score(y_test, y_pred)), ("TRAIN", str(train_index)), ("TEST", str(
+            test_index)), ("Pred_probas", y_predproba), ("CM", local_cm), ("Classification report", local_report), ("Scores", local_scores)]).T
+
+        local_rskf_results.columns = local_rskf_results.iloc[0]
+        local_rskf_results = local_rskf_results[1:]
+        rskf_results = rskf_results.append(local_rskf_results)
+
+        #per class accuracy
+        local_support = precision_recall_fscore_support(y_test, y_pred)[3]
+        local_acc = np.diag(local_cm) / local_support
+        rskf_per_class_results.append(local_acc)
+
+
+elapsed = time() - start
+print("Time elapsed: {0:.2f} minutes ({1:.1f} sec)".format(
+    elapsed / 60, elapsed))
+
+# Results
+rskf_results.to_csv("./results/lr_sp_repeatedCV_record.csv", index=False)
+
+# rename columns to avoid duplicates
+nameslist = list(range(1, rkf_scores.shape[1] - 1))
+rkf_scores.columns = rkf_scores.columns[:2].tolist() + nameslist
+
+# calculate mean and sem of scores
+rownum = 0
+for rowid in rkf_scores.index:
+    rkf_scores.at[rowid, "scores mean"] = np.mean(
+        np.mean(rkf_scores.iloc[rownum, 3:]))
+    rkf_scores.at[rowid, "scores sem"] = np.mean(
+        stats.sem(np.mean(rkf_scores.iloc[rownum, 3:])))
+    rownum += 1
+
+
+rkf_scores.dropna(axis=1).to_csv(
+    "./results/lr_sp_rkf_scores.csv", index=False)
+
+rskf_results = pd.read_csv("./results/lr_sp_repeatedCV_record.csv")
+rkf_scores = pd.read_csv("./results/lr_sp_rkf_scores.csv")
+# rkf_scores.index = y.unique().zfill(1)
+
+# Accuracy distribution
+lr_sp_acc_distrib = rskf_results["Accuracy"]
+lr_sp_acc_distrib.columns = ["Accuracy"]
+lr_sp_acc_distrib.to_csv(
+    "./results/lr_sp_acc_distrib.csv", header=True, index=False)
+lr_sp_acc_distrib = pd.read_csv("./results/lr_sp_acc_distrib.csv")
+lr_sp_acc_distrib = np.round(100 * lr_sp_acc_distrib)
+
+plt.figure(figsize=(2.25, 3))
+sns.distplot(lr_sp_acc_distrib, kde=False, bins=12)
+plt.savefig("./plots/lr_sp_acc_distrib.pdf", bbox_inches="tight")
+plt.savefig("./plots/lr_sp_acc_distrib.png", bbox_inches="tight")
+
+# Per class accuracy
+class_names = y.sort_values().unique()
+lr_sp_per_class_acc_distrib = pd.DataFrame(
+    rskf_per_class_results, columns=class_names)
+lr_sp_per_class_acc_distrib.dropna().to_csv(
+    "./results/lr_sp_per_class_acc_distrib.csv")
+lr_sp_per_class_acc_distrib = pd.read_csv(
+    "./results/lr_sp_per_class_acc_distrib.csv", index_col=0)
+lr_sp_per_class_acc_distrib = np.round(
+    100 * lr_sp_per_class_acc_distrib)
+lr_sp_per_class_acc_distrib_describe = lr_sp_per_class_acc_distrib.describe()
+lr_sp_per_class_acc_distrib_describe.to_csv(
+    "./results/lr_sp_per_class_acc_distrib.csv")
+
+lr_sp_per_class_acc_distrib = pd.melt(
+    lr_sp_per_class_acc_distrib, var_name="AR age")
+lr_sp_per_class_acc_distrib.groupby("AR age").mean()
+plt.figure(figsize=(4.75, 3))
+plt.rc('font', family='Helvetica')
+sns.violinplot(x="AR age", y="value", cut=0,
+               order=list(lr_sp_per_class_acc_distrib["AR age"].unique()),
+               data=lr_sp_per_class_acc_distrib)
+sns.despine(left=True)
+plt.xticks(rotation=0, ha="right")
+plt.xlabel("Species")
+plt.ylabel("Prediction accuracy")
+plt.savefig("./plots/lr_sp_per_class_acc_distrib_ALL.pdf", bbox_inches="tight")
+plt.savefig("./plots/lr_sp_per_class_acc_distrib_ALL.png", bbox_inches="tight")
+
+# Confusion matrix
+rskf_results = pd.read_csv("./results/lr_sp_repeatedCV_record.csv")
+
+n = 10
+best_n_cm = np.zeros((len(y.unique()), len(y.unique())))
+for model in np.arange(0, 10):
+    ar = rskf_results.sort_values(
+        by="Accuracy", ascending=False).iloc[model, 4].replace('[ ', '[').split()
+    ar = np.array(ast.literal_eval(",".join(ar)))
+    best_n_cm += ar
+best_n_cm = best_n_cm / n
+
+top10_acc = rskf_results.sort_values(
+    by="Accuracy", ascending=False)["Accuracy"][:9].mean()
+
+class_names = y.sort_values().unique()
+
+plt.figure(figsize=(4, 4))
+plot_confusion_matrix(best_n_cm, normalise=True, classes=class_names)
+print("Accuracy: ", top10_acc)
+
+plt.savefig("./plots/lr_sp_cm_ALL.pdf", bbox_inches="tight")
+plt.savefig("./plots/lr_sp_cm_ALL.png", bbox_inches="tight")
