@@ -3,6 +3,7 @@ import os
 import glob
 import re
 import ast
+import itertools
 from time import time
 from tqdm import tqdm
 from collections import Counter
@@ -16,6 +17,8 @@ import statsmodels.formula.api as smf
 
 from random import randint
 from collections import Counter
+
+import pickle
 
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
@@ -119,7 +122,7 @@ def plot_confusion_matrix(cm, classes,
     plt.yticks(tick_marks, classes, rotation=yrotation)
 
     if text:
-        thresh = cm.max() / 2.
+        thresh = cm.max() / 2
         for i, j in itertools.product(range(cm.shape[0]),
                                       range(cm.shape[1])):
             plt.text(j, i, "{0:.2f}".format(cm[i, j]), horizontalalignment="center",
@@ -181,7 +184,7 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
 
 
 # import full dataset
-df_full = pd.read_table("mosquitoes_spectra (180227).dat")
+df_full = pd.read_table("mosquitoes_spectra (180227).dat");
 
 df_full.head()
 Counter(df_full["Species"])
@@ -256,6 +259,7 @@ df_all_food = df_all_food.iloc[:,5:]
 
 df_sp_food = df_full.copy()
 df_sp_food.index = df_sp_food["Species"]
+df_sp_BA = df_sp_food[df_sp_food["Status"] == "BA"].iloc[:, 5:]
 df_sp_BF = df_sp_food[df_sp_food["Status"] == "BF"].iloc[:, 5:]
 df_sp_SF = df_sp_food[df_sp_food["Status"] == "SF"].iloc[:, 5:]
 df_sp_GR = df_sp_food[df_sp_food["Status"] == "GR"].iloc[:, 5:]
@@ -264,7 +268,7 @@ df_sp_SF_GR = df_sp_food[(df_sp_food["Status"] == "GR") | (
 df_sp_ALL = df_sp_food.iloc[:, 5:]
 
 # transform species data
-for df in [df_sp_BF, df_sp_SF, df_sp_GR, df_sp_SF_GR, df_sp_ALL]:
+for df in [df_sp_BA, df_sp_BF, df_sp_SF, df_sp_GR, df_sp_SF_GR, df_sp_ALL]:
     df[df.columns] = StandardScaler().fit_transform(df[df.columns].as_matrix())
 
 
@@ -326,7 +330,7 @@ models.append(("SVM", SVC()))
 # models.append(("NB", GaussianNB()))
 # models.append(("LDA", LinearDiscriminantAnalysis()))
 # models.append(("CART", DecisionTreeClassifier()))
-models.append(("RF", RandomForestClassifier()))
+models.append(("RF",RandomForestClassifier()))
 # models.append(("ET", ExtraTreeClassifier()))
 models.append(("XGB", XGBClassifier(objective="binary:logistic")))
 
@@ -395,7 +399,7 @@ classifier = LogisticRegressionCV(Cs=30,
                                   multi_class="ovr",
                                   random_state=seed)
 
-
+#%% train
 # repeated random stratified splitting of dataset
 rskf = RepeatedStratifiedKFold(
     n_splits=num_splits, n_repeats=num_repeats, random_state=seed)
@@ -437,7 +441,7 @@ for round in range(num_rounds):
                               left_index=True, right_index=True, how='outer')
 
         local_rskf_results = pd.DataFrame([("Accuracy", accuracy_score(y_test, y_pred)), ("TRAIN", str(train_index)), ("TEST", str(
-            test_index)), ("Pred_probas", y_predproba), ("CM", local_cm), ("Classification report", local_report), ("Scores", local_scores)]).T
+            test_index)), ("Pred_probas", y_predproba), ("CM", local_cm), ("Classification report", local_report), ("Scores", local_scores), ("Pickle", pickle.dumps(classifier))]).T
 
         local_rskf_results.columns = local_rskf_results.iloc[0]
         local_rskf_results = local_rskf_results[1:]
@@ -473,6 +477,7 @@ for rowid in rkf_scores.index:
 rkf_scores.dropna(axis=1).to_csv(
     "./results/lr_sp_rkf_scores.csv", index=False)
 
+#%% evaluate train models
 rskf_results = pd.read_csv("./results/lr_sp_repeatedCV_record.csv")
 rkf_scores = pd.read_csv("./results/lr_sp_rkf_scores.csv")
 # rkf_scores.index = y.unique().zfill(1)
@@ -543,12 +548,32 @@ print("Accuracy: ",top10_acc)
 plt.savefig("./plots/lr_sp_cm_SF_GR.pdf", bbox_inches="tight")
 plt.savefig("./plots/lr_sp_cm_SF_GR.png", bbox_inches="tight")
 
+#%% test on field samples
+rskf_results = pd.read_csv("./results/lr_sp_repeatedCV_record.csv")
+
+n = 10
+sp_BA_true = df_sp_BA.index.values
+class_names = np.unique(df_sp_SF_GR.index)
+cm_dims = len(np.unique(df_sp_SF_GR.index))
+best_n_clf_cm = np.zeros((cm_dims, cm_dims))
+
+for model in np.arange(0,10):
+    best_clf = rskf_results.sort_values(by="Accuracy", ascending=False).iloc[model, -1]
+    best_clf = pickle.loads(ast.literal_eval(best_clf))
+    sp_BA_pred = best_clf.predict(df_sp_BA)
+    best_cm = confusion_matrix(sp_BA_true, sp_BA_pred)
+    best_n_clf_cm += best_cm
+best_n_clf_cm = best_n_clf_cm/n
+
+plt.figure(figsize=(4, 4))
+plot_confusion_matrix(best_n_clf_cm, normalise=False, text=True, classes=class_names)
+plt.savefig("./plots/lr_sp_cm_BA.pdf", bbox_inches="tight")
+plt.savefig("./plots/lr_sp_cm_BA.png", bbox_inches="tight")
 
 #%% Optimising XGBoost
 # Parameter search
 
-# features & labels
-df = df_sp_SF_GR.copy()
+# features & labelsdf = df_sp_SF_GR.copy()
 X = df.values
 y = df.index
 

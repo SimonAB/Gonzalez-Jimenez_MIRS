@@ -1,7 +1,6 @@
 # %% import modules
 import os
 import warnings
-import pickle
 from time import time
 from tqdm import tqdm
 from collections import Counter
@@ -15,6 +14,8 @@ import statsmodels.formula.api as smf
 
 from random import randint
 from collections import Counter
+
+import pickle
 
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
@@ -177,6 +178,7 @@ def modelfit(alg, dtrain, predictors, useTrainCV=True, cv_folds=5, early_stoppin
 df_full = pd.read_table("mosquitoes_spectra (180227).dat")
 
 df_full.head()
+Counter(df_full['Species'][df_full['Status'] == 'BA'])
 
 # train & cross-validation sets
 df_real_age = pd.read_table("mosquitoes_spectra (180227).dat", index_col="Real age")
@@ -189,6 +191,7 @@ Counter(df_ag_real_age.columns)
 
 # feed
 df_ag_all = df_ag_real_age.iloc[:, 4:]
+df_ag_BA = df_ag_real_age[df_ag_real_age["Status"] == "BA"].iloc[:, 4:]
 df_ag_BF = df_ag_real_age[df_ag_real_age["Status"] == "BF"].iloc[:, 4:]
 df_ag_SF = df_ag_real_age[df_ag_real_age["Status"] == "SF"].iloc[:, 4:]
 df_ag_GR = df_ag_real_age[df_ag_real_age["Status"] == "GR"].iloc[:, 4:]
@@ -200,7 +203,7 @@ df_ag_all_missing = df_ag_real_age_missing.iloc[:,4:]
 df_ag_SF_GR_missing = df_ag_real_age_missing[(df_ag_real_age_missing["Status"] == "GR") | ( df_ag_real_age_missing["Status"] == "SF")].iloc[:, 4:]
 
 # transform species data
-for df in [df_ag_all, df_ag_SF, df_ag_SF, df_ag_GR, df_ag_SF_GR, df_ag_all_missing, df_ag_SF_GR_missing]:
+for df in [df_ag_BA, df_ag_all, df_ag_SF, df_ag_SF, df_ag_GR, df_ag_SF_GR, df_ag_all_missing, df_ag_SF_GR_missing]:
     df[df.columns] = StandardScaler().fit_transform(df[df.columns].as_matrix())
 
 # population age structure for test set
@@ -349,6 +352,7 @@ classifier = LogisticRegressionCV(Cs=10,
                                   random_state=seed)
 
 
+#%% train
 # repeated random stratified splitting of dataset
 rskf = RepeatedStratifiedKFold(
     n_splits=num_splits, n_repeats=num_repeats, random_state=seed)
@@ -356,6 +360,7 @@ rskf = RepeatedStratifiedKFold(
 # prepare matrices of results
 rskf_results = pd.DataFrame()  # model parameters and global accuracy score
 rskf_per_class_results = []  # per class accuracy scores
+# rskf_per_class_results = pd.DataFrame()  # per class accuracy scores
 rkf_scores = pd.DataFrame(
     columns=["age", "scores mean", "scores sem"]).set_index("age")
 
@@ -427,12 +432,12 @@ for rowid in rkf_scores.index:
 rkf_scores.dropna(axis=1).to_csv(
     "./results/lr_ag_age_rkf_scores_SF.csv", index=False)
 
-#%% plots
+#%% evaluate
 rskf_results = pd.read_csv("./results/lr_ag_age_repeatedCV_record_SF_GR.csv")
 rkf_scores = pd.read_csv("./results/lr_ag_age_rkf_scores_SF.csv")
 # rkf_scores.index = y.unique().zfill(1)
-rskf_per_class_results = read_csv(
-    "./results/lr_ag_age_repeatedCV_per_class_record_SF_GR.csv")
+# rskf_per_class_results = pd.read_csv(
+    # "./results/lr_ag_age_repeatedCV_per_class_record_SF_GR.csv")
 
 
 # Accuracy distribution
@@ -500,6 +505,28 @@ plot_confusion_matrix(best_n_cm, normalise=True, classes=class_names)
 plt.savefig("./plots/lr_ag_age_cm_SF_GR.pdf", bbox_inches="tight")
 plt.savefig("./plots/lr_ag_age_cm_SF_GR.png", bbox_inches="tight")
 
+#%% test on field samples
+rskf_results = pd.read_csv("./results/lr_ag_age_repeatedCV_record_SF_GR.csv")
+
+n = 10
+ag_BA_true = df_ag_BA.index.values
+class_names = np.unique(df_ag_SF_GR.index)
+cm_dims = len(np.unique(df_ag_SF_GR.index))
+best_n_clf_cm = np.zeros((cm_dims, cm_dims))
+
+for model in np.arange(0, 10):
+    best_clf = rskf_results.sort_values(
+        by="Accuracy", ascending=False).iloc[model, 3]
+    best_clf = pickle.loads(ast.literal_eval(best_clf))
+    ag_BA_pred = best_clf.predict(df_ag_BA)
+    best_cm = confusion_matrix(ag_BA_true, ag_BA_pred)
+    best_n_clf_cm += best_cm
+best_n_clf_cm = best_n_clf_cm/n
+
+plt.figure(figsize=(4, 4))
+plot_confusion_matrix(best_n_clf_cm, normalise=False, text=False,classes=class_names)
+plt.savefig("./plots/lr_ag_cm_BA.pdf", bbox_inches="tight")
+plt.savefig("./plots/lr_ag_cm_BA.png", bbox_inches="tight")
 
 #%% Predict population age structure from test set
 
@@ -517,43 +544,90 @@ age_prop_int_pred = best_clf.predict(df_test_intervention)
 # plt.savefig("./plots/lr_ag_age_struct_cm.png", bbox_inches="tight"
 
 # Predict and reconstruct age structure of population
+
+# Test distribution of count data and predicted
+true = df_test.index.values
+pred = age_prop_pred
+ks_fit = stats.ks_2samp(true, pred)
+stats.chisquare(f_obs=pred, f_exp=true)
+
+# Test of half-logistic fits
+hl_true = stats.halflogistic.fit(df_test.index.values)
+hl_pred = stats.halflogistic.fit(age_prop_pred)
+hl_fit = stats.ks_2samp(hl_true, hl_pred)
+
+# plot
 plt.figure()
 ax = sns.distplot(df_test.index, bins=len(
     df_test.index.unique()), label="Population", color="grey", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "grey", "lw": 3})
 ax = sns.distplot(age_prop_pred, bins=len(
     df_test.index.unique()), label="Predicted", color="darkorange", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "darkorange", "lw": 3})
-ax.set(xlim=(1, 25), xlabel="Mosquito age", ylabel="Proportion in population")
+ax.set(xlim=(1, 25), xlabel="Mosquito age", ylabel="Proportion in population\n KS_2samp p = {0:.2f}".format(ks_fit[1]))
 plt.legend()
 plt.savefig("./plots/lr_ag_age_struct_SF_GR.pdf", bbox_inches="tight")
 plt.savefig("./plots/lr_ag_age_struct_SF_GR.png", bbox_inches="tight")
 
+
 # Predict and reconstruct age structure of population post intervention
+
+# Test distribution of count data and predicted
+true = df_test_intervention.index.values
+pred = age_prop_int_pred
+ks_fit_int = stats.ks_2samp(true, pred)
+stats.chisquare(f_obs=pred, f_exp=true)
+
+# Test of half-ogistic fits
+hl_true = stats.halflogistic.fit(true)
+hl_pred = stats.halflogistic.fit(pred)
+hl_fit_int = stats.ks_2samp(hl_true, hl_pred)
+
+# plot
 plt.figure()
 ax = sns.distplot(df_test_intervention.index, bins=len(
     df_test_intervention.index.unique()), label="Population", color="grey", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "grey", "lw": 3})
 ax = sns.distplot(age_prop_int_pred, bins=len(
     df_test_intervention.index.unique()), label="Predicted", color="darkorange", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "darkorange", "lw": 3})
-ax.set(xlim=(1, 25), xlabel="Mosquito age", ylabel="Proportion in population")
+ax.set(xlim=(1, 25), xlabel="Mosquito age",
+       ylabel="Proportion in population\n KS_2samp p = {0:.2f}".format(ks_fit_int[1]))
 arrow = plt.arrow(x=4, y=0.4, dx=0, dy=-0.1, width=0.25,
                   head_length=0.03, color="k", label="Intervention")
 plt.legend()
 plt.savefig("./plots/lr_ag_age_struct_int_SF_GR.pdf", bbox_inches="tight")
 plt.savefig("./plots/lr_ag_age_struct_int_SF_GR.png", bbox_inches="tight")
 
+
+# Compare true pre-post interventions
+true_pre_int = df_test.index.values
+true_post_int = df_test_intervention.index.values
+stats.ks_2samp(true_pre_int, true_post_int)
+# stats.chisquare(f_obs=true_pre_int, f_exp=true_post_int) # fails because not same sample size
+# Test of half-ogistic fits
+hl_true = stats.halflogistic.fit(true_pre_int)
+hl_pred = stats.halflogistic.fit(true_post_int)
+hl_fit_int = stats.ks_2samp(hl_true, hl_pred)
+
+
+# Compare predicted pre-post interventions
+pred_pre_int = age_prop_pred
+pred_post_int = age_prop_int_pred
+stats.ks_2samp(pred_pre_int, pred_post_int)
+# Test of half-ogistic fits
+hl_true = stats.halflogistic.fit(pred_pre_int)
+hl_pred = stats.halflogistic.fit(pred_post_int)
+hl_fit_int = stats.ks_2samp(hl_true, hl_pred)
+
 # Predict and reconstruct age structure of population with missing ages only (worse case scenario)
-plt.figure()
-ax = sns.distplot(df_test_missing.index, bins=len(
-    df_test_missing.index.unique()), label = "Population", color = "grey", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "grey", "lw": 3})
-ax = sns.distplot(age_prop_int_pred,  bins=len(
-    df_test_missing.index.unique()), label="Predicted", color="darkorange", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "darkorange", "lw": 3})
-ax.set(xlim=(1, 25), xlabel="Mosquito age", ylabel="Proportion in population")
-arrow = plt.arrow(x=4, y=0.25, dx=0, dy=-0.05, width=0.25,
-                  head_length=0.03, color="k", label="Intervention")
-plt.legend()
-plt.savefig("./plots/lr_ag_age_struct_missing_SF_GR.pdf", bbox_inches="tight")
-plt.savefig("./plots/lr_ag_age_struct_missing_SF_GR.png", bbox_inches="tight")
-
-
+# plt.figure()
+# ax = sns.distplot(df_test_missing.index, bins=len(
+#     df_test_missing.index.unique()), label = "Population", color = "grey", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "grey", "lw": 3})
+# ax = sns.distplot(age_prop_int_pred,  bins=len(
+#     df_test_missing.index.unique()), label="Predicted", color="darkorange", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "darkorange", "lw": 3})
+# ax.set(xlim=(1, 25), xlabel="Mosquito age", ylabel="Proportion in population")
+# arrow = plt.arrow(x=4, y=0.25, dx=0, dy=-0.05, width=0.25,
+#                   head_length=0.03, color="k", label="Intervention")
+# plt.legend()
+# plt.savefig("./plots/lr_ag_age_struct_missing_SF_GR.pdf", bbox_inches="tight")
+# plt.savefig("./plots/lr_ag_age_struct_missing_SF_GR.png", bbox_inches="tight")
 
 
 # #############################################################################

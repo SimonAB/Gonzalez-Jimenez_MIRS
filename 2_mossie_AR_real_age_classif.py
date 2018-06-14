@@ -514,28 +514,76 @@ age_prop_int_pred = best_clf.predict(df_test_intervention)
 # plt.savefig("./plots/lr_ar_age_struct_cm.png", bbox_inches="tight"
 
 # Predict and reconstruct age structure of population
+
+# Test distribution of count data and predicted
+true = df_test.index.values
+pred = age_prop_pred
+ks_fit = stats.ks_2samp(true, pred)
+stats.chisquare(f_obs=pred, f_exp=true)
+
+# Test of half-logistic fits
+hl_true = stats.halflogistic.fit(df_test.index.values)
+hl_pred = stats.halflogistic.fit(age_prop_pred)
+hl_fit = stats.ks_2samp(hl_true, hl_pred)
+
+# plot
 plt.figure()
 ax = sns.distplot(df_test.index, bins=len(
     df_test.index.unique()), label="Population", color="grey", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "grey", "lw": 3})
 ax = sns.distplot(age_prop_pred, bins=len(
     df_test.index.unique()), label="Predicted", color="darkorange", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "darkorange", "lw": 3})
-ax.set(xlim=(1, 25), xlabel="Mosquito age", ylabel="Proportion in population")
+ax.set(xlim=(1, 25), xlabel="Mosquito age",
+       ylabel="Proportion in population\n KS_2samp p = {0:.2f}".format(ks_fit[1]))
 plt.legend()
 plt.savefig("./plots/lr_ar_age_struct_SF_GR.pdf", bbox_inches="tight")
 plt.savefig("./plots/lr_ar_age_struct_SF_GR.png", bbox_inches="tight")
 
 # Predict and reconstruct age structure of population post intervention
+
+# Test distribution of count data and predicted
+true = df_test_intervention.index.values
+pred = age_prop_int_pred
+ks_fit_int = stats.ks_2samp(true, pred)
+stats.chisquare(f_obs=pred, f_exp=true)
+
+# Test of half-ogistic fits
+hl_true = stats.halflogistic.fit(true)
+hl_pred = stats.halflogistic.fit(pred)
+hl_fit_int = stats.ks_2samp(hl_true, hl_pred)
+
+# plot
 plt.figure()
 ax = sns.distplot(df_test_intervention.index, bins=len(
-    df_test_intervention.index.unique()), label="Population", color="grey",  kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "grey", "lw": 3})
+    df_test_intervention.index.unique()), label="Population", color="grey", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "grey", "lw": 3})
 ax = sns.distplot(age_prop_int_pred, bins=len(
     df_test_intervention.index.unique()), label="Predicted", color="darkorange", kde=False, fit=stats.halflogistic, fit_kws={"cut": 1, "color": "darkorange", "lw": 3})
-ax.set(xlim=(1, 25), xlabel="Mosquito age", ylabel="Proportion in population")
+ax.set(xlim=(1, 25), xlabel="Mosquito age",
+       ylabel="Proportion in population\n KS_2samp p = {0:.2f}".format(ks_fit_int[1]))
 arrow = plt.arrow(x=4, y=0.4, dx=0, dy=-0.1, width=0.25,
                   head_length=0.03, color="k", label="Intervention")
 plt.legend()
 plt.savefig("./plots/lr_ar_age_struct_int_SF_GR.pdf", bbox_inches="tight")
 plt.savefig("./plots/lr_ar_age_struct_int_SF_GR.png", bbox_inches="tight")
+
+true_pre_int = df_test.index.values
+true_post_int = df_test_intervention.index.values
+stats.ks_2samp(true_pre_int, true_post_int)
+# stats.chisquare(f_obs=true_pre_int, f_exp=true_post_int) # fails because not same sample size
+# Test of half-ogistic fits
+hl_true = stats.halflogistic.fit(true_pre_int)
+hl_pred = stats.halflogistic.fit(true_post_int)
+hl_fit_int = stats.ks_2samp(hl_true, hl_pred)
+
+
+# Compare predicted pre-post interventions
+pred_pre_int = age_prop_pred
+pred_post_int = age_prop_int_pred
+stats.ks_2samp(pred_pre_int, pred_post_int)
+# Test of half-ogistic fits
+hl_true = stats.halflogistic.fit(pred_pre_int)
+hl_pred = stats.halflogistic.fit(pred_post_int)
+hl_fit_int = stats.ks_2samp(hl_true, hl_pred)
+
 
 # # Predict and reconstruct age structure of population with missing ages only (worse case scenario)
 # plt.figure()
