@@ -9,9 +9,10 @@ Mario González-Jiménez<sup>1*</sup>, Simon A. Babayan<sup>2*</sup>, Pegah Khaz
 <sup>*</sup> These authors contributed equally to this work.
  
 ### Description
-This repository contains code used to generate models for the classification of mosquito species (see Fig 2), their ages (Fig 3), and population age structure (Fig 4).
+This repository contains code used to process wave number readings, to generate models for the classification of mosquito species (see Fig 2), their ages (Fig 3), and population age structure (Fig 4).
 
 ### Files
 
+- `Loco mosquito.ipynb` contains code for processing outputs of the mid-infrared spectrometer into datasets suitable for machine learning
 - `OpWT_classification.py` contains a summary of the code used for training classification models for both species and age class prediction.
 - `OpWT_population_structure.py` contains code used to compare true and predicted age structures of a simulated population. Predictions were made using the most accurate model trained in `OpWT_classification.py`
