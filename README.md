@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2609356.svg)](https://doi.org/10.5281/zenodo.2609356)
+
 # Prediction of mosquito species and population age structure using mid-infrared spectroscopy and supervised machine learning
 
 Mario González-Jiménez<sup>1*</sup>, Simon A. Babayan<sup>2*</sup>, Pegah Khazaeli<sup>1</sup>, Margaret Doyle<sup>2</sup>, Finlay Walton<sup>1</sup>, Elliott Reedy<sup>1</sup>, Thomas Glew<sup>1</sup>, Mafalda Viana<sup>2</sup>, Lisa Ranford-Cartwright<sup>2</sup>, Abdoulaye Niang<sup>4</sup>, Doreen J. Siria<sup>3</sup>, Fredros O. Okumu<sup>2,3</sup>, Abdoulaye Diabaté<sup>4</sup>, Heather M. Ferguson<sup>2</sup>, Francesco Baldini<sup>2</sup>, and Klaas Wynne<sup>1</sup>
