@@ -10,4 +10,4 @@ Mario González-Jiménez<sup>1*</sup>, Simon A. Babayan<sup>2*</sup>, Pegah Khaz
 <sup>4</sup> Department of Medical Biology and Public Health, Institut de Recherche en Science de la Santé (IRSS), Bobo-Dioulasso, Burkina Faso\
 <sup>*</sup> These authors contributed equally to this work.
  
- This repository contains all code used to generate models for the classification of mosquito species (see Fig 2), their ages (Fig 3), and mosuito population age structure (Fig 4).
+ This repository contains all code used to generate models for the classification of mosquito species (see Fig 2), their ages (Fig 3), and population age structure (Fig 4).
